@@ -6,6 +6,7 @@ import logging
 import os
 import pyrocopy
 import random
+import re
 import shutil
 import sys
 import tempfile
@@ -190,40 +191,57 @@ try:
     shutil.rmtree(dst)
     genRandomContents(os.path.join(src, "file1"), MAX_FILE_SIZE)
     genRandomContents(os.path.join(lvl1, "test"), MAX_FILE_SIZE)
-    genRandomContents(os.path.join(lvl1, "dummy1"), MAX_FILE_SIZE)
-    genRandomContents(os.path.join(lvl1, "dummy2"), MAX_FILE_SIZE)
+    os.mkdir(os.path.join(src, "dummydir"))
+    genRandomContents(os.path.join(src, "dummydir", "dummy1"), MAX_FILE_SIZE)
+    genRandomContents(os.path.join(src, "dummydir", "dummy2"), MAX_FILE_SIZE)
+    os.mkdir(os.path.join(lvl1, "moredir"))
     i = 0
     while (i < 5):
-        genRandomContents(os.path.join(lvl2, "more"+str(i)), MAX_FILE_SIZE)
+        genRandomContents(os.path.join(lvl1, "moredir", "more"+str(i)), MAX_FILE_SIZE)
         i += 1
 
-    # check includes copy
-    includes = ['d[0-9]+', 'f[0-9]+']
-    result = pyrocopy.copy(src, dst, includes=includes)
+    # check file includes copy
+    includeFiles = ['f[0-9]+']
+    result = pyrocopy.copy(src, dst, includeFiles=includeFiles)
     if (result != 15):
-        raise Exception("Failed to copy with includes")
+        raise Exception("Failed to copy with includeFiles['f[0-9+']")
+    for root, dirs, files in os.walk(dst):
+        for file in files:
+            if (not re.match('f[0-9]+', file)):
+                raise Exception("Failed to include only files with pattern: f[0-9]+")
 
-    # check excludes copy
+    # check file excludes copy
     shutil.rmtree(dst)
-    excludes = ['f[0-9]+']
-    result = pyrocopy.copy(src, dst, excludes=excludes)
+    excludeFiles = ['f[0-9]+']
+    result = pyrocopy.copy(src, dst, excludeFiles=excludeFiles)
     if (result != 9):
-        raise Exception("Failed to copy with excludes")
+        raise Exception("Failed to copy with excludeFiles['f[0-9+']")
+    for root, dirs, files in os.walk(dst):
+        for file in files:
+            if (re.match('f[0-9]+', file)):
+                raise Exception("Failed to exclude files with pattern: f[0-9]+")
 
-    # check includes+excludes copy
+    # check dir includes copy
     shutil.rmtree(dst)
-    excludes = ['dummy[0-9]+', 'file[0-9]+', 'test']
-    result = pyrocopy.copy(src, dst, includes=includes, excludes=excludes)
-    if (result != 20):
-        raise Exception("Failed to copy with includes+excludes")
+    includeDirs = ['d[0-9]+']
+    result = pyrocopy.copy(src, dst, includeDirs=includeDirs)
+    if (result != 17):
+        raise Exception("Failed to copy with includeDirs=['d[0-9]+']")
+    for root, dirs, files in os.walk(dst):
+        for dir in dirs:
+            if (dir == "moredir" or dir == "dummydir"):
+                raise Exception("Failed to only include specified directories.")
 
-    # check exclude all except dummy1 and dummy2
+    # check dir excludes copy
     shutil.rmtree(dst)
-    includes = ['dummy[0-9]+']
-    excludes = ['.*']
-    result = pyrocopy.copy(src, dst, includes=includes, excludes=excludes)
-    if (result != 2):
-        raise Exception("Failed to copy with includes+excludes")
+    excludeDirs = ['moredir']
+    result = pyrocopy.copy(src, dst, excludeDirs=excludeDirs)
+    if (result != 19):
+        raise Exception("Failed to copy with excludeDirs=['moredir']")
+    for root, dirs, files in os.walk(dst):
+        for dir in dirs:
+            if (dir == "moredir"):
+                raise Exception("Failed to only exclude directory 'moredir'.")
 
     logger.info("Tests complete!")
 

@@ -26,13 +26,19 @@ Copies all files from the given source directory to the destination.
 :type dst:string
 :param dst: The destination path to copy to
 
-:type includes:array
-:param includes: A list of regex patterns of files to include during the operation.
-                Files matching the include list always get copied, even if there is a match in the exclude list.
+:type includeFiles:array
+:param includeFiles: A list of regex patterns of files to include during the operation.
+                     Files not matching at least one pattern in the include list will be skipped.
 
-:type excludes:array
-:param excludes: A list of regex patterns of files to exclude during the operation.
-                Files matching the exclude list can be overriden by the include list.
+:type includeDirs:array
+:param includeDirs: A list of regex patterns of directory names to include during the operation.
+                    Directories not matching at least one pattern in the include list will be skipped.
+
+:type excludeFiles:array
+:param excludeFiles: A list of regex patterns of files to exclude during the operation.
+
+:type excludeDirs:array
+:param excludeDirs: A list of regex patterns of directory names to exclude during the operation.
 
 :type level:int
 :param level: The maximum depth to traverse in the source directory tree.
@@ -53,7 +59,8 @@ Copies all files from the given source directory to the destination.
 :return: Upon success returns a positive value indicating the number of files copied (including zero). If a failure
         occurred returns the number of failed files as a negative value.
 '''
-def copy(src, dst, includes=None, excludes=None, level=0, followLinks=False, forceOverwrite=False, preserveStats=True):
+def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, excludeDirs=None, level=0,
+         followLinks=False, forceOverwrite=False, preserveStats=True):
     result = 0
 
     # Stats
@@ -63,14 +70,22 @@ def copy(src, dst, includes=None, excludes=None, level=0, followLinks=False, for
     numDirSkipped = 0
     
     # Compile the provided regex patterns
-    includePatterns = []
-    if (includes != None):
-        for pattern in includes:
-            includePatterns.append(re.compile(pattern))
-    excludePatterns = []
-    if (excludes != None):
-        for pattern in excludes:
-            excludePatterns.append(re.compile(pattern))
+    includeFilePatterns = []
+    if (includeFiles != None):
+        for pattern in includeFiles:
+            includeFilePatterns.append(re.compile(pattern))
+    includeDirPatterns = []
+    if (includeDirs != None):
+        for pattern in includeDirs:
+            includeDirPatterns.append(re.compile(pattern))
+    excludeFilePatterns = []
+    if (excludeFiles != None):
+        for pattern in excludeFiles:
+            excludeFilePatterns.append(re.compile(pattern))
+    excludeDirPatterns = []
+    if (excludeDirs != None):
+        for pattern in excludeDirs:
+            excludeDirPatterns.append(re.compile(pattern))
 
     if (not _isSamePath(src, dst)):
         # Is the source path a file, directory or symlink?
@@ -80,7 +95,7 @@ def copy(src, dst, includes=None, excludes=None, level=0, followLinks=False, for
                 dst = os.path.join(dst, os.path.basename(src))
 
             # Copy the file
-            result = _copyFile(src, dst, includePatterns, excludePatterns)
+            result = _copyFile(src, dst, includeFilePatterns, excludeFilePatterns)
             if (result == 1):
                 logger.info("Copied: %s => %s", src, dst)
                 numCopied += 1
@@ -132,7 +147,8 @@ def copy(src, dst, includes=None, excludes=None, level=0, followLinks=False, for
                         continue
 
                 # Should the directory be traversed?
-                if (relRoot != '.' and not _checkShouldCopy(os.path.basename(relRoot), includePatterns, excludePatterns)):
+                if (relRoot != '.' and
+                    not _checkShouldCopy(os.path.basename(relRoot), includeDirPatterns, excludeDirPatterns)):
                     logger.info("Skipped: %s", relRoot)
                     numDirSkipped += 1
                     continue
@@ -151,7 +167,9 @@ def copy(src, dst, includes=None, excludes=None, level=0, followLinks=False, for
                     dstFullPath = os.path.join(dst, filePath)
 
                     # Copy the file
-                    result = _copyFile(srcFullPath, dstFullPath, includes=includePatterns, excludes=excludePatterns, forceOverwrite=forceOverwrite, preserveStats=preserveStats)
+                    result = _copyFile(srcFullPath, dstFullPath, includes=includeFilePatterns,
+                                       excludes=excludeFilePatterns, forceOverwrite=forceOverwrite,
+                                       preserveStats=preserveStats)
                     if (result == 1):
                         logger.info("Copied: %s => %s", filePath, dstFullPath)
                         numCopied += 1
