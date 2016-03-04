@@ -95,6 +95,14 @@ def copy(src, dst, includes=None, excludes=None, level=0, followLinks=False, for
             if (not os.path.isdir(dst)):
                 mkdir(dst)
 
+            # Determine the max depth. We can do this easily by walking in reverse
+            maxDepth = 0
+            for root, dirs, files in os.walk(src, topdown=False, followlinks=followLinks):
+                relRoot = os.path.relpath(root, src)
+                maxDepth = relRoot.count(os.path.sep) + 1
+                break
+            
+            # Traverse the tree and begin copying
             for root, dirs, files in os.walk(src, topdown=(level >= 0), followlinks=followLinks):
                 relRoot = os.path.relpath(root, src)
 
@@ -108,14 +116,23 @@ def copy(src, dst, includes=None, excludes=None, level=0, followLinks=False, for
 
                 # Exclude items not at the desired depth
                 if (level != 0):
-                    depth = relRoot.count(os.path.sep)
+                    # Determine the current depth of relRoot
+                    depth = 0
+                    if (relRoot != '.'):
+                        depth = relRoot.count(os.path.sep) + 1
+
+                    # If traversing in reverse we need to subtract the max depth to get the relative level
+                    if (level < 0):
+                        depth = maxDepth - depth
+
+                    # Now check the level
                     if (depth >= abs(level)):
                         logger.info("Skipped: %s", relRoot)
                         numDirSkipped += 1
                         continue
 
                 # Should the directory be traversed?
-                if (not _checkShouldCopy(relRoot, includePatterns, excludePatterns)):
+                if (relRoot != '.' and not _checkShouldCopy(os.path.basename(relRoot), includePatterns, excludePatterns)):
                     logger.info("Skipped: %s", relRoot)
                     numDirSkipped += 1
                     continue
@@ -227,10 +244,12 @@ def _isSamePath(src, dst):
             os.path.normcase(os.path.abspath(dst)))
 
 '''
-Determines if the given path will be copied given the list of includes and excludes.
+Determines if the given file name will be copied given the list of includes and excludes.
+When include patterns are provided the filename must match at least one of the patterns
+given and cannot be excluded
 
-:type path:string
-:param path: The path to check
+:type filename:string
+:param filename: The name of the file to check
 
 :type includes:array
 :param includes: The list of compiled inclusive regex patterns to check the path against
@@ -238,24 +257,22 @@ Determines if the given path will be copied given the list of includes and exclu
 :type excludes:array
 :param excludes: The list of compiled exclusive regex patterns to check the path against
 '''
-def _checkShouldCopy(path, includes, excludes):
+def _checkShouldCopy(filename, includes, excludes):
     # Check the file against the include list
-    isIncluded = False
-    for pattern in includes:
-        if (re.match(pattern, path) != None):
-            isIncluded = True
-            break
-
-    # Now check the exclude list
-    isExcluded = False
-    if (isIncluded == False):
-        for pattern in excludes:
-            if (re.match(pattern, path) != None):
-                isExcluded = True
+    if (len(includes) > 0):
+        isIncluded = False
+        for pattern in includes:
+            if (re.match(pattern, filename) != None):
+                isIncluded = True
                 break
+        return isIncluded
 
-    # An explicit include always overrides the exclude
-    return isIncluded or isExcluded == False
+    # Now check the exclude lists
+    for pattern in excludes:
+        if (re.match(pattern, filename) != None):
+            return False
+
+    return True
 
 '''
 Copies a file from the give source path to the destination.
@@ -295,7 +312,7 @@ def _copyFile(src, dst, includes=None, excludes=None, showProgress=True, forceOv
         return -1
 
     # Should the file be copied?
-    if (not _checkShouldCopy(src, includes, excludes)):
+    if (not _checkShouldCopy(os.path.basename(src), includes, excludes)):
         return 0
 
     # Don't overwrite older copies of files unless explicitly desired
@@ -371,7 +388,7 @@ def _displayProgress(currentValue, totalValue):
             streams.append(handler.stream)
 
     # If no output streams were found we can't display the progress bar
-    if (streams.count == 0):
+    if (len(streams) == 0):
         return
 
     strToDisplay = str(currentValue) + " / " + str(totalValue) + " ["

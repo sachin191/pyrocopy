@@ -7,12 +7,56 @@ import os
 import pyrocopy
 import random
 import shutil
+import sys
 import tempfile
 
 # Set up the logger
 logger = logging.getLogger()
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
+
+'''
+Writes random contents to the file at the specified path.
+
+:type path:string
+:param path: The path to the file to write.
+
+:type maxFileSize:int
+:param maxFileSize: The maximum size of the file contents to generate.
+'''
+def genRandomContents(path, maxFileSize):
+    with open(path, 'w') as file:
+        # Randomly generate data in the file
+        totalChars = random.randint(0, maxFileSize)
+        curChar = 0
+        while (curChar < totalChars):
+            file.write(chr(random.randint(1,255)))
+            curChar += 1
+            if (curChar % (maxFileSize / 100) == 0):
+                pyrocopy._displayProgress(curChar, totalChars)
+        file.flush()
+        logger.info("")
+
+'''
+Creates a new file at the given path with random contents.
+
+:type path:string
+:param path: The path to a directory to create the new file in.
+
+:type maxFileSize:int
+:param maxFileSize: The maximum size of the file to create.
+
+:rtype:string
+:return: The path to the newly created file.
+'''
+def genRandomFile(path, maxFileSize):
+    filename = "f" + str(random.randint(0, sys.maxint))
+    filepath = os.path.join(path, filename)
+
+    logger.info("Creating: %s", filepath)
+    genRandomContents(filepath, maxFileSize)
+    
+    return filename
 
 '''
 Generate a random directory tree.
@@ -60,22 +104,8 @@ def genRandomTree(path, maxlevels, totalFiles, maxFileSize):
         numToCreate = random.randint(0, maxToCreate)
         curFile = 0
         while (curFile < numToCreate):
-            filename = "f" + str(random.randint(0, totalFiles * totalFiles))
-            filepath = os.path.join(curDir, filename)
-            logger.info("Creating: %s", filepath)
-            with open(filepath, 'w') as file:
-                # Randomly generate data in the file
-                totalChars = random.randint(0, maxFileSize)
-                curChar = 0
-                while (curChar < totalChars):
-                    file.write(chr(random.randint(1,255)))
-                    curChar += 1
-                    if (curChar % (maxFileSize / 100) == 0):
-                        pyrocopy._displayProgress(curChar, totalChars)
-                file.flush()
+            genRandomFile(curDir, maxFileSize)
             curFile += 1
-
-            logger.info("")
 
         numFiles += numToCreate
 
@@ -84,6 +114,9 @@ def genRandomTree(path, maxlevels, totalFiles, maxFileSize):
 # Create a temporary place to work
 logger.info("Creating temp directory...")
 tmpdir = tempfile.mkdtemp()
+
+# Constants
+MAX_FILE_SIZE = 16 * 1024
 
 try:
     # mkdir test
@@ -104,8 +137,8 @@ try:
     # copy test
     logger.info("Testing pyrocopy.copy() ...")
     numFiles = 30
-    src = genRandomTree(tmpdir, 4, numFiles, 16 * 1024)
-    #src = genRandomTree("C:\\", 4, numFiles, 16 * 1024)
+    src = genRandomTree(tmpdir, 4, numFiles, MAX_FILE_SIZE)
+    #src = genRandomTree("C:\\", 4, numFiles, MAX_FILE_SIZE)
     dst = os.path.join(tmpdir, os.path.basename(src) + "Copy")
     #dst = os.path.join("C:\\", os.path.basename(src) + "Copy")
 
@@ -127,11 +160,80 @@ try:
         raise Exception("Failed to overwrite all files.")
     # TODO Diff src and dst
 
+    shutil.rmtree(dst)
+
+    # check depth level copy
+    src = genRandomTree(tmpdir, 0, 5, MAX_FILE_SIZE)
+    lvl1 = genRandomTree(src, 0, 3, MAX_FILE_SIZE)
+    lvl2 = genRandomTree(lvl1, 0, 7, MAX_FILE_SIZE)
+    dst = os.path.join(tmpdir, os.path.basename(src) + "Copy")
+
+    result = pyrocopy.copy(src, dst, level=1)
+    if (result != 5):
+        raise Exception("Failed to copy at depth level 1")
+
+    shutil.rmtree(dst)
+    result = pyrocopy.copy(src, dst, level=-1)
+    if (result != 7):
+        raise Exception("Failed to copy at depth level -1")
+
+    shutil.rmtree(dst)
+    result = pyrocopy.copy(src, dst, level=2)
+    if (result != 8):
+        raise Exception("Failed to copy at depth level 2")
+
+    shutil.rmtree(dst)
+    result = pyrocopy.copy(src, dst, level=-2)
+    if (result != 10):
+        raise Exception("Failed to copy at depth level -2")
+
+    shutil.rmtree(dst)
+    genRandomContents(os.path.join(src, "file1"), MAX_FILE_SIZE)
+    genRandomContents(os.path.join(lvl1, "test"), MAX_FILE_SIZE)
+    genRandomContents(os.path.join(lvl1, "dummy1"), MAX_FILE_SIZE)
+    genRandomContents(os.path.join(lvl1, "dummy2"), MAX_FILE_SIZE)
+    i = 0
+    while (i < 5):
+        genRandomContents(os.path.join(lvl2, "more"+str(i)), MAX_FILE_SIZE)
+        i += 1
+
+    # check includes copy
+    includes = ['d[0-9]+', 'f[0-9]+']
+    result = pyrocopy.copy(src, dst, includes=includes)
+    if (result != 15):
+        raise Exception("Failed to copy with includes")
+
+    # check excludes copy
+    shutil.rmtree(dst)
+    excludes = ['f[0-9]+']
+    result = pyrocopy.copy(src, dst, excludes=excludes)
+    if (result != 9):
+        raise Exception("Failed to copy with excludes")
+
+    # check includes+excludes copy
+    shutil.rmtree(dst)
+    excludes = ['dummy[0-9]+', 'file[0-9]+', 'test']
+    result = pyrocopy.copy(src, dst, includes=includes, excludes=excludes)
+    if (result != 20):
+        raise Exception("Failed to copy with includes+excludes")
+
+    # check exclude all except dummy1 and dummy2
+    shutil.rmtree(dst)
+    includes = ['dummy[0-9]+']
+    excludes = ['.*']
+    result = pyrocopy.copy(src, dst, includes=includes, excludes=excludes)
+    if (result != 2):
+        raise Exception("Failed to copy with includes+excludes")
+
     logger.info("Tests complete!")
 
 except Exception as err:
+    # Store original trace
+    (_, _, traceback) = sys.exc_info()
+    
     # clean up temp
     logger.info("Deleting temp files...")
     shutil.rmtree(tmpdir)
 
-    raise err
+    # Re-raise with original trace
+    raise err, None, traceback
