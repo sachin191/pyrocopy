@@ -1,29 +1,244 @@
 '''
-Copyright 2016 Jean-Philippe Steinmetz
+Robust file utilities for Python inspired by Windows' robocopy.
+
+Copyright (C) 2016 Jean-Philippe Steinmetz
 '''
 
 import logging
 import os
 import re
-import shutil
-
-# Set up a logger
-logger = logging.getLogger()
-logger.addHandler(logging.StreamHandler())
+import sys
 
 '''
-Determines if the given path should be copied given the list of includes and excludes.
+The logger used to report information and progress during operations.
+
+The default log level is INFO.
+'''
+logger = logging.getLogger()
+logger.addHandler(logging.NullHandler())
+
+'''
+Copies all files from the given source directory to the destination.
+
+:type src:string
+:param src: The source path to copy from
+
+:type dst:string
+:param dst: The destination path to copy to
+
+:type includes:array
+:param includes: A list of regex patterns of files to include during the operation.
+                Files matching the include list always get copied, even if there is a match in the exclude list.
+
+:type excludes:array
+:param excludes: A list of regex patterns of files to exclude during the operation.
+                Files matching the exclude list can be overriden by the include list.
+
+:type level:int
+:param level: The maximum depth to traverse in the source directory tree.
+               A value of 0 traverses the entire tree.
+               A positive value traverses N levels from the top with value 1 being the source root.
+               A negative value traverses N levels from the bottom of the source tree.
+
+:type followLinks:bool
+:param followLinks: Set to true to traverse through symbolic links.
+
+:type forceOverwrite:bool
+:param forceOverwrite: Set to true to overwrite destination files even if they are newer.
+
+:type preserveStats:bool
+:param preserveStats: Set to True to copy the source file stats to the destination.
+
+:rtype:int
+:return: Upon success returns a positive value indicating the number of files copied (including zero). If a failure
+        occurred returns the number of failed files as a negative value.
+'''
+def copy(src, dst, includes=None, excludes=None, level=0, followLinks=False, forceOverwrite=False, preserveStats=True):
+    result = 0
+
+    # Stats
+    numCopied = 0
+    numFailed = 0
+    numSkipped = 0
+    numDirSkipped = 0
+    
+    # Compile the provided regex patterns
+    includePatterns = []
+    if (includes != None):
+        for pattern in includes:
+            includePatterns.append(re.compile(pattern))
+    excludePatterns = []
+    if (excludes != None):
+        for pattern in excludes:
+            excludePatterns.append(re.compile(pattern))
+
+    if (not _isSamePath(src, dst)):
+        # Is the source path a file, directory or symlink?
+        if (os.path.isfile(src) or (not followLinks and os.path.islink(src))):
+            # Is the destination path a file name or directory?
+            if (os.path.isdir(dst)):
+                dst = os.path.join(dst, os.path.basename(src))
+
+            # Copy the file
+            result = _copyFile(src, dst, includePatterns, excludePatterns)
+            if (result == 1):
+                logger.info("Copied: %s => %s", src, dst)
+                numCopied += 1
+            elif (result == 0):
+                logger.info("Skipped: %s", src)
+                numSkipped += 1
+            else:
+                logger.error("Failed: %s => %s", src, dst)
+                numFailed += 1
+        elif (os.path.isdir(src)):
+            # Make sure the destination exists to copy files to
+            if (not os.path.isdir(dst)):
+                mkdir(dst)
+
+            for root, dirs, files in os.walk(src, topdown=(level >= 0), followlinks=followLinks):
+                relRoot = os.path.relpath(root, src)
+
+                logger.debug("Processing Directory: %s", relRoot)
+
+                # Is the root a symlink? Should we follow?
+                if (os.path.islink(root) and not followLinks):
+                    logger.info("Skipped: %s", root)
+                    numDirSkipped += 1
+                    continue
+
+                # Exclude items not at the desired depth
+                if (level != 0):
+                    depth = relRoot.count(os.path.sep)
+                    if (depth >= abs(level)):
+                        logger.info("Skipped: %s", relRoot)
+                        numDirSkipped += 1
+                        continue
+
+                # Should the directory be traversed?
+                if (not _checkShouldCopy(relRoot, includePatterns, excludePatterns)):
+                    logger.info("Skipped: %s", relRoot)
+                    numDirSkipped += 1
+                    continue
+
+                # Make sure the root directory exists at the destination
+                dstRoot = os.path.join(dst, relRoot)
+                if (not os.path.isdir(dstRoot)):
+                    if (not mkdir(dstRoot)):
+                        logger.exception("Failed: %s", dstRoot)
+                        numDirFailed += 1
+                        continue
+        
+                for file in files:
+                    filePath = os.path.join(relRoot, file)
+                    srcFullPath = os.path.join(src, root, file)
+                    dstFullPath = os.path.join(dst, filePath)
+
+                    # Copy the file
+                    result = _copyFile(srcFullPath, dstFullPath, includes=includePatterns, excludes=excludePatterns, forceOverwrite=forceOverwrite, preserveStats=preserveStats)
+                    if (result == 1):
+                        logger.info("Copied: %s => %s", filePath, dstFullPath)
+                        numCopied += 1
+                    elif (result == 0):
+                        logger.info("Skipped: %s", filePath)
+                        numSkipped += 1
+                    else:
+                        logger.error("Failed: %s => %s", filePath, dstFullPath)
+                        numFailed += 1
+        else:
+            logger.error("Source path is not valid: %s", src)
+            numFailed += 1
+    else:
+        logger.error("Cannot perform a copy to the same location.")
+        numFailed += 1
+
+    # The result should be the total number of files successfully copied. If no files were copied and there is at least
+    # one failure then report a negative value for the number of failed copies.
+    result = numCopied
+    if (result == 0 and numFailed > 0):
+        result = numFailed * -1
+
+    # Report the results
+    logger.info("")
+    logger.info("--------------------")
+    if (result >= 0):
+        logger.info("Operation Completed:")
+    else:
+        logger.info("Operation Failed:")
+    logger.info("--------------------")
+    logger.info("Copied:  %d", numCopied)
+    logger.info("Failed:  %d", numFailed)
+    logger.info("Skipped: Files: %d, Directories: %d", numSkipped, numDirSkipped)
+    logger.info("--------------------")
+
+    return result
+
+'''
+Creats a new directory at the specified path. This function will create all parent directories that are missing in the
+given path.
+
+:type path:string
+:param path: The path of the new directory to create.
+
+:rtype:bool
+:return: Returns True if the directory was successfully created, otherwise False.
+'''
+def mkdir(path):
+    if (os.path.exists(path)):
+        return os.path.isdir(path)
+
+    # Determine if the parent directory exists, if not attempt to create it
+    pair = os.path.split(path)
+    if (not os.path.isdir(pair[0])):
+        mkdir(pair[0])
+
+    # Now does the parent directory exist?
+    if (not os.path.isdir(pair[0])):
+        return False
+
+    # Attempt to create the directory
+    os.mkdir(path)
+
+    logger.debug("Created: %s", path)
+
+    return os.path.isdir(path)
+
+'''
+Checks if the two given paths point to the same place.
+
+:type src:string
+:param src: The source path to check.
+
+:type dst:string
+:param dst: The destination path to check.
+
+:rtype:bool
+:return: Returns True if src and dst point to the same location, otherwise False.
+'''
+def _isSamePath(src, dst):
+    # Mac/Unix
+    if (hasattr(os.path, 'samefile')):
+        try:
+            return os.path.samefile(src, dst)
+        except OSError:
+            return False
+
+    # All other platforms
+    return (os.path.normcase(os.path.abspath(src)) ==
+            os.path.normcase(os.path.abspath(dst)))
+
+'''
+Determines if the given path will be copied given the list of includes and excludes.
 
 :type path:string
 :param path: The path to check
 
 :type includes:array
-:param includes: The list of compiled regex patterns to check the path against
+:param includes: The list of compiled inclusive regex patterns to check the path against
 
 :type excludes:array
-:param excludes: The list of compiled regex patterns to check the path against
+:param excludes: The list of compiled exclusive regex patterns to check the path against
 '''
-def shouldCopy(path, includes, excludes):
+def _checkShouldCopy(path, includes, excludes):
     # Check the file against the include list
     isIncluded = False
     for pattern in includes:
@@ -43,144 +258,140 @@ def shouldCopy(path, includes, excludes):
     return isIncluded or isExcluded == False
 
 '''
-Copies all files from the given source directory to the destination.
+Copies a file from the give source path to the destination.
 
-:type srcPath:string
-:param srcPath: The source path to copy from
+:type src:string
+:param src: The path of the source file to copy.
 
-:type dstPath:string
-:param dstPath: The destination path to copy to
+:type dst:string
+:param dst: The path of the destination to copy src to.
 
-:type include:array
-:param include: A list of regex patterns of files to include during the operation.
-                Files matching the include list always get copied, even if there is a match in the exclude list.
+:type includes:array
+:param includes: The list of compiled inclusive regex patterns to check the source path against.
 
-:type exclude:array
-:param exclude: A list of regex patterns of files to exclude during the operation.
-                Files matching the exclude list can be overriden by the include list.
+:type excludes:array
+:param excludes: The list of compiled exclusive regex patterns to check the source path against.
 
-:type level:int
-:param level: The maximum depth to traverse in the source directory tree.
-               A value of 0 traverses the entire tree.
-               A positive value traverses N levels from the top with value 1 being the source root.
-               A negative value traverses N levels from the bottom of the source tree.
+:type showProgress:bool
+:param showProgress: Set to True to display real-time progress information about the operation. Progress is only shown
+                     to stdout and stderr.
 
-:type followLinks:bool
-:param followLinks: Set to true to traverse through symbolic links.
+:type forceOverwrite:bool
+:param forceOverwrite: Set to True to overwrite destination files even if they are newer.
 
-:type loglevel:int
-:param loglevel: The logging level to use for output. See module logging for values.
+:type preserveStats:bool
+:param preserveStats: Set to True to copy the source file stats to the destination.
+
+:rtype:int
+:return: Returns a value 1 if the file was copied, value 0 if the file was skipped and -1 if an error occurred.
 '''
-def copy(srcPath, dstPath, includes=None, excludes=None, level=0, followLinks=False, loglevel=logging.INFO):
-    # Set the logger level
-    logger.setLevel(loglevel)
+def _copyFile(src, dst, includes=None, excludes=None, showProgress=True, forceOverwrite=False, preserveStats=True):
+    # Only copy files
+    if (not os.path.isfile(src)):
+        return 0
 
-    # Stats
-    numCopied = 0
-    numFailed = 0
-    numSkipped = 0
-    numDirSkipped = 0
-    
-    # Compile the provided regex patterns
-    includePatterns = []
-    if (includes != None):
-        for pattern in includes:
-            includePatterns.append(re.compile(pattern))
-    excludePatterns = []
-    if (excludes != None):
-        for pattern in excludes:
-            excludePatterns.append(re.compile(pattern))
+    # Don't copy files to the same location
+    if (_isSamePath(src, dst)):
+        return -1
 
-    # Is the source path a file or directory?
-    if (os.path.isfile(srcPath)):
-        # Is the destination path a file name or directory?
-        if (os.path.isdir(dstPath)):
-            dstPath = os.path.join(dstPath, os.path.basename(srcPath))
+    # Should the file be copied?
+    if (not _checkShouldCopy(src, includes, excludes)):
+        return 0
 
-        # Should the file be copied?
-        if (shouldCopy(srcPath, includePatterns, excludePatterns) == False):
-            logger.info("Skipped: %s", srcPath)
-            numSkipped += 1
-        elif (os.path.exists(dstPath) and os.path.getmtime(dstPath) >= os.path.getmtime(srcPath)):
-            logger.info("Skipped: %s", srcPath)
-            numSkipped += 1
-        else:
-            shutil.copy2(srcPath, dstPath)
-            if (os.path.exists(dstPath)):
-                logger.info("Copied: %s => %s", srcPath, dstPath)
-                numCopied += 1
-            else:
-                logger.info("Failed: %s => %s", srcPath, dstPath)
-                numFailed += 1
+    # Don't overwrite older copies of files unless explicitly desired
+    if (not forceOverwrite and os.path.exists(dst) and os.path.getmtime(dst) >= os.path.getmtime(src)):
+        return 0
+
+    # Finally perform the copy
+    logger.info("Copying: %s => %s", src, dst)
+    if (os.path.islink(src)):
+        os.symlink(os.readlink(src), dst)
     else:
-        # Make sure the destination exists to copy files to
-        if (os.path.isdir(dstPath) == False):
-            os.mkdir(dstPath)
 
-        for root, dirs, files in os.walk(srcPath, followlinks=followLinks):
-            relRoot = os.path.relpath(root, srcPath)
+        # The number of bytes per read operation
+        maxReadLength = 16*1024
+        with open(src, 'rb') as fsrc:
+            with open(dst, 'wb') as fdst:
+                bytesTotal = os.path.getsize(src)
+                bytesWritten = 0
+                while 1:
+                    buf = fsrc.read(maxReadLength)
+                    if not buf:
+                        break
+                    fdst.write(buf)
+                    
+                    bytesWritten += len(buf)
+                    _displayProgress(bytesWritten, bytesTotal)
 
-            # Is the root a symlink? Should we follow?
-            if (os.path.islink(root) and followLinks == False):
-                logger.info("Skipped: %s", root)
-                numDirSkipped += 1
-                continue
+        # Spit out an empty line so subsequent text starts on the next line
+        logger.info("")
 
-            # Exclude items not at the desired depth
-            if (level != 0):
-                depth = relRoot.count(os.path.sep) + 1
-                if (depth >= abs(level)):
-                    logger.info("Skipped: %s", relRoot)
-                    numDirSkipped += 1
-                    continue
+        # Copy file stats
+        if (preserveStats):
+            _copyStats(src, dst)
 
-            # Should the directory be traversed?
-            if (shouldCopy(relRoot, includePatterns, excludePatterns) == False):
-                logger.info("Skipped: %s", relRoot)
-                numDirSkipped += 1
-                continue
+    # Was the copy successful?
+    if (os.path.exists(dst)):
+        # If the file isn't a symlink, check the size
+        if (os.path.islink(dst) or os.path.getsize(src) == os.path.getsize(dst)):
+            return 1
 
-            # Make sure the root directory exists at the destination
-            dstRoot = os.path.join(dstPath, relRoot)
-            if (os.path.isdir(dstRoot) == False):
-                os.mkdir(dstRoot)
-        
-            for file in files:
-                filePath = os.path.join(relRoot, file)
+    return -1
 
-                # Should the file be copied?
-                if (shouldCopy(filePath, includePatterns, excludePatterns) == False):
-                    logger.info("Skipping: %s", filePath)
-                    numSkipped += 1
-                    continue
+'''
+Copies the stat info from src to dst.
 
-                # Don't overwrite older copies of files unless explicitly desired
-                srcFilePath = os.path.join(srcPath, root, file)
-                dstFilePath = os.path.join(dstPath, filePath)
-                if (os.path.exists(dstFilePath) and os.path.getmtime(dstFilePath) >= os.path.getmtime(srcFilePath)):
-                    logger.info("Skipping: %s", filePath)
-                    numSkipped += 1
-                    continue
+:type src:string
+:param src: The source path to copy stat info from.
 
-                # Make sure the parent directory exists
-                dstRoot = os.path.join(dstPath, relRoot)
-                if (os.path.isdir(dstRoot) == False):
-                    os.mkdir(dstRoot)
+:type dst:string
+:param dst: The destination path to copy stat info to.
+'''
+def _copyStats(src, dst):
+    return
+'''
+Displays a progress for the given file operation.
 
-                # Finally, copy the file
-                shutil.copy2(srcFilePath, dstFilePath)
-                if (os.path.exists(dstFilePath)):
-                    logger.info("Copied: %s => %s", filePath, dstFilePath)
-                    numCopied += 1
-                else:
-                    logger.info("Failed: %s => %s", filePath, dstFilePath)
-                    numFailed += 1
+:type currentValue:int
+:param currentValue: The value representing the current progress.
 
-    logger.info("")
-    logger.info("--------------------")
-    logger.info("Operation Completed:")
-    logger.info("--------------------")
-    logger.info("Copied:  %d", numCopied)
-    logger.info("Failed:  %d", numFailed)
-    logger.info("Skipped: Files: %d, Directories: %d", numSkipped, numDirSkipped)
-    logger.info("--------------------")
+:type totalValue:int
+:param totalValue: The maximum value of the progress to be achieved.
+'''
+def _displayProgress(currentValue, totalValue):
+    # Displaying the progress bar should only be shown at the appropriate log level (INFO)
+    if (logger.getEffectiveLevel() > logging.INFO):
+        return
+
+    # Attempt to grab all available stdout/stderr streams from the list of logger handlers
+    streams = []
+    for handler in logger.handlers:
+        if (isinstance(handler, logging.StreamHandler) and 
+            (handler.stream is sys.stderr or handler.stream is sys.stdout)):
+            streams.append(handler.stream)
+
+    # If no output streams were found we can't display the progress bar
+    if (streams.count == 0):
+        return
+
+    strToDisplay = str(currentValue) + " / " + str(totalValue) + " ["
+
+    # Add the progress bar
+    maxLineLength = 80
+    percentComplete = float(currentValue) / float(totalValue)
+    currentBarValue = int(maxLineLength * percentComplete)
+    i = 0
+    while (i < maxLineLength):
+        if (i < currentBarValue):
+            strToDisplay += "="
+        elif (i == currentBarValue):
+            strToDisplay += ">"
+        else:
+            strToDisplay += " "
+        i += 1
+
+    strToDisplay += "]\r"
+
+    for stream in streams:
+        stream.write(strToDisplay)
+        stream.flush()
