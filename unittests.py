@@ -144,21 +144,27 @@ try:
     #dst = os.path.join("C:\\", os.path.basename(src) + "Copy")
 
     # check initial copy
-    result = pyrocopy.copy(src, dst)
-    if (result != numFiles):
+    results = pyrocopy.copy(src, dst)
+    if (results['filesCopied'] != numFiles):
         raise Exception("Failed to copy all files.")
+    if (results['filesFailed'] > 0 or results['dirsFailed'] > 0):
+        raise Exception("Failed to copy some files or directories.")
     # TODO Diff src and dst
 
     # check second copy (should skip all files)
-    result = pyrocopy.copy(src, dst)
-    if (result != 0):
+    results = pyrocopy.copy(src, dst)
+    if (results['filesSkipped'] != numFiles):
         raise Exception("Failed to skip all files.")
+    if (results['filesFailed'] > 0 or results['dirsFailed'] > 0):
+        raise Exception("Failed to process some files or directories.")
     # TODO Diff src and dst
 
     # check overwrite copy
-    result = pyrocopy.copy(src, dst, forceOverwrite=True)
-    if (result != numFiles):
+    results = pyrocopy.copy(src, dst, forceOverwrite=True)
+    if (results['filesCopied'] != numFiles):
         raise Exception("Failed to overwrite all files.")
+    if (results['filesFailed'] > 0 or results['dirsFailed'] > 0):
+        raise Exception("Failed to copy some files or directories.")
     # TODO Diff src and dst
 
     shutil.rmtree(dst)
@@ -169,23 +175,23 @@ try:
     lvl2 = genRandomTree(lvl1, 0, 7, MAX_FILE_SIZE)
     dst = os.path.join(tmpdir, os.path.basename(src) + "Copy")
 
-    result = pyrocopy.copy(src, dst, level=1)
-    if (result != 5):
+    results = pyrocopy.copy(src, dst, level=1)
+    if (results['filesCopied'] != 5):
         raise Exception("Failed to copy at depth level 1")
 
     shutil.rmtree(dst)
-    result = pyrocopy.copy(src, dst, level=-1)
-    if (result != 7):
+    results = pyrocopy.copy(src, dst, level=-1)
+    if (results['filesCopied'] != 7):
         raise Exception("Failed to copy at depth level -1")
 
     shutil.rmtree(dst)
-    result = pyrocopy.copy(src, dst, level=2)
-    if (result != 8):
+    results = pyrocopy.copy(src, dst, level=2)
+    if (results['filesCopied'] != 8):
         raise Exception("Failed to copy at depth level 2")
 
     shutil.rmtree(dst)
-    result = pyrocopy.copy(src, dst, level=-2)
-    if (result != 10):
+    results = pyrocopy.copy(src, dst, level=-2)
+    if (results['filesCopied'] != 10):
         raise Exception("Failed to copy at depth level -2")
 
     shutil.rmtree(dst)
@@ -202,8 +208,8 @@ try:
 
     # check file includes copy
     includeFiles = ['f[0-9]+']
-    result = pyrocopy.copy(src, dst, includeFiles=includeFiles)
-    if (result != 15):
+    results = pyrocopy.copy(src, dst, includeFiles=includeFiles)
+    if (results['filesCopied'] != 15):
         raise Exception("Failed to copy with includeFiles['f[0-9+']")
     for root, dirs, files in os.walk(dst):
         for file in files:
@@ -213,8 +219,8 @@ try:
     # check file excludes copy
     shutil.rmtree(dst)
     excludeFiles = ['f[0-9]+']
-    result = pyrocopy.copy(src, dst, excludeFiles=excludeFiles)
-    if (result != 9):
+    results = pyrocopy.copy(src, dst, excludeFiles=excludeFiles)
+    if (results['filesCopied'] != 9):
         raise Exception("Failed to copy with excludeFiles['f[0-9+']")
     for root, dirs, files in os.walk(dst):
         for file in files:
@@ -224,8 +230,8 @@ try:
     # check dir includes copy
     shutil.rmtree(dst)
     includeDirs = ['d[0-9]+']
-    result = pyrocopy.copy(src, dst, includeDirs=includeDirs)
-    if (result != 17):
+    results = pyrocopy.copy(src, dst, includeDirs=includeDirs)
+    if (results['filesCopied'] != 17):
         raise Exception("Failed to copy with includeDirs=['d[0-9]+']")
     for root, dirs, files in os.walk(dst):
         for dir in dirs:
@@ -235,8 +241,8 @@ try:
     # check dir excludes copy
     shutil.rmtree(dst)
     excludeDirs = ['moredir']
-    result = pyrocopy.copy(src, dst, excludeDirs=excludeDirs)
-    if (result != 19):
+    results = pyrocopy.copy(src, dst, excludeDirs=excludeDirs)
+    if (results['filesCopied'] != 19):
         raise Exception("Failed to copy with excludeDirs=['moredir']")
     for root, dirs, files in os.walk(dst):
         for dir in dirs:

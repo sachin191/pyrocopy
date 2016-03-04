@@ -55,19 +55,19 @@ Copies all files from the given source directory to the destination.
 :type preserveStats:bool
 :param preserveStats: Set to True to copy the source file stats to the destination.
 
-:rtype:int
-:return: Upon success returns a positive value indicating the number of files copied (including zero). If a failure
-        occurred returns the number of failed files as a negative value.
+:rtype:dict
+:return: Returns a dictionary containing the following stats:
+         'filesCopied', 'filesFailed', 'filesSkipped', 'dirsCopied', 'dirsFailed', 'dirsSkipped'
 '''
 def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, excludeDirs=None, level=0,
          followLinks=False, forceOverwrite=False, preserveStats=True):
-    result = 0
-
     # Stats
-    numCopied = 0
-    numFailed = 0
-    numSkipped = 0
-    numDirSkipped = 0
+    filesCopied = 0
+    filesFailed = 0
+    filesSkipped = 0
+    dirsCopied = 0
+    dirsFailed = 0
+    dirsSkipped = 0
     
     # Compile the provided regex patterns
     includeFilePatterns = []
@@ -98,13 +98,13 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
             result = _copyFile(src, dst, includeFilePatterns, excludeFilePatterns)
             if (result == 1):
                 logger.info("Copied: %s => %s", src, dst)
-                numCopied += 1
+                filesCopied += 1
             elif (result == 0):
                 logger.info("Skipped: %s", src)
-                numSkipped += 1
+                filesSkipped += 1
             else:
                 logger.error("Failed: %s => %s", src, dst)
-                numFailed += 1
+                filesFailed += 1
         elif (os.path.isdir(src)):
             # Make sure the destination exists to copy files to
             if (not os.path.isdir(dst)):
@@ -126,7 +126,7 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
                 # Is the root a symlink? Should we follow?
                 if (os.path.islink(root) and not followLinks):
                     logger.info("Skipped: %s", root)
-                    numDirSkipped += 1
+                    dirsSkipped += 1
                     continue
 
                 # Exclude items not at the desired depth
@@ -143,23 +143,27 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
                     # Now check the level
                     if (depth >= abs(level)):
                         logger.info("Skipped: %s", relRoot)
-                        numDirSkipped += 1
+                        dirsSkipped += 1
                         continue
 
                 # Should the directory be traversed?
                 if (relRoot != '.' and
                     not _checkShouldCopy(os.path.basename(relRoot), includeDirPatterns, excludeDirPatterns)):
                     logger.info("Skipped: %s", relRoot)
-                    numDirSkipped += 1
+                    dirsSkipped += 1
                     continue
 
                 # Make sure the root directory exists at the destination
                 dstRoot = os.path.join(dst, relRoot)
                 if (not os.path.isdir(dstRoot)):
-                    if (not mkdir(dstRoot)):
-                        logger.exception("Failed: %s", dstRoot)
-                        numDirFailed += 1
-                        continue
+                    mkdir(dstRoot)
+
+                if (os.path.isdir(dstRoot)):
+                    dirsCopied += 1
+                else:
+                    logger.exception("Failed: %s", dstRoot)
+                    dirsFailed += 1
+                    continue
         
                 for file in files:
                     filePath = os.path.join(relRoot, file)
@@ -172,13 +176,13 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
                                        preserveStats=preserveStats)
                     if (result == 1):
                         logger.info("Copied: %s => %s", filePath, dstFullPath)
-                        numCopied += 1
+                        filesCopied += 1
                     elif (result == 0):
                         logger.info("Skipped: %s", filePath)
-                        numSkipped += 1
+                        filesSkipped += 1
                     else:
                         logger.error("Failed: %s => %s", filePath, dstFullPath)
-                        numFailed += 1
+                        filesFailed += 1
         else:
             logger.error("Source path is not valid: %s", src)
             numFailed += 1
@@ -186,26 +190,16 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
         logger.error("Cannot perform a copy to the same location.")
         numFailed += 1
 
-    # The result should be the total number of files successfully copied. If no files were copied and there is at least
-    # one failure then report a negative value for the number of failed copies.
-    result = numCopied
-    if (result == 0 and numFailed > 0):
-        result = numFailed * -1
-
-    # Report the results
-    logger.info("")
-    logger.info("--------------------")
-    if (result >= 0):
-        logger.info("Operation Completed:")
-    else:
-        logger.info("Operation Failed:")
-    logger.info("--------------------")
-    logger.info("Copied:  %d", numCopied)
-    logger.info("Failed:  %d", numFailed)
-    logger.info("Skipped: Files: %d, Directories: %d", numSkipped, numDirSkipped)
-    logger.info("--------------------")
-
-    return result
+    # Return the results
+    results = {}
+    results['filesCopied'] = filesCopied
+    results['filesFailed'] = filesFailed
+    results['filesSkipped'] = filesSkipped
+    results['dirsCopied'] = dirsCopied
+    results['dirsFailed'] = dirsFailed
+    results['dirsSkipped'] = dirsSkipped
+    
+    return results
 
 '''
 Creats a new directory at the specified path. This function will create all parent directories that are missing in the
@@ -384,8 +378,10 @@ Copies the stat info from src to dst.
 '''
 def _copyStats(src, dst):
     return
+
 '''
-Displays a progress for the given file operation.
+Prints the current progress for the given file operation to any stdout or stderr handler attached to logger using the
+INFO level.
 
 :type currentValue:int
 :param currentValue: The value representing the current progress.
@@ -430,3 +426,22 @@ def _displayProgress(currentValue, totalValue):
     for stream in streams:
         stream.write(strToDisplay)
         stream.flush()
+
+'''
+Prints a table showing the results of a copy operation to the INFO log.
+
+:type results:dict
+:param results: The dictionary containing the copy results to display.
+'''
+def _displayCopyResults(results):
+    logger.info("--------------------")
+    logger.info("Files:")
+    logger.info("\tCopied: %d", results['filesCopied'])
+    logger.info("\tSkipped: %d", results['filesSkipped'])
+    logger.info("\tFailed: %d", results['filesFailed'])
+    logger.info("")
+    logger.info("Directories:")
+    logger.info("\tCopied: %d", results['dirsCopied'])
+    logger.info("\tSkipped: %d", results['dirsSkipped'])
+    logger.info("\tFailed: %d", results['dirsFailed'])
+    logger.info("--------------------")
