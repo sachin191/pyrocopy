@@ -180,14 +180,15 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
                 if (not os.path.isdir(dstRoot)):
                     mkdir(dstRoot)
 
-                if (os.path.isdir(dstRoot)):
-                    results['dirsCopied'] += 1
-                else:
-                    logger.exception("Failed: %s", dstRoot)
-                    results['dirsFailed'] += 1
-                    if (detailedResults):
-                        results['dirsFailedList'].append(dstRoot)
-                    continue
+                if (relRoot != '.'):
+                    if (os.path.isdir(dstRoot)):
+                        results['dirsCopied'] += 1
+                    else:
+                        logger.exception("Failed: %s", dstRoot)
+                        results['dirsFailed'] += 1
+                        if (detailedResults):
+                            results['dirsFailedList'].append(dstRoot)
+                        continue
         
                 for file in files:
                     filePath = os.path.join(relRoot, file)
@@ -251,6 +252,100 @@ def mkdir(path):
     return os.path.isdir(path)
 
 '''
+Creates an exact copy of the given source to the destination. Copies all files and directories from source to the
+destination and removes any file or directory present in the destination that is not also in the source.
+
+:type src:string
+:param src: The source path to copy from
+
+:type dst:string
+:param dst: The destination path to copy to
+
+:type includeFiles:array
+:param includeFiles: A list of regex patterns of files to include during the operation.
+                     Files not matching at least one pattern in the include list will be skipped.
+
+:type includeDirs:array
+:param includeDirs: A list of regex patterns of directory names to include during the operation.
+                    Directories not matching at least one pattern in the include list will be skipped.
+
+:type excludeFiles:array
+:param excludeFiles: A list of regex patterns of files to exclude during the operation.
+
+:type excludeDirs:array
+:param excludeDirs: A list of regex patterns of directory names to exclude during the operation.
+
+:type level:int
+:param level: The maximum depth to traverse in the source directory tree.
+               A value of 0 traverses the entire tree.
+               A positive value traverses N levels from the top with value 1 being the source root.
+               A negative value traverses N levels from the bottom of the source tree.
+
+:type followLinks:bool
+:param followLinks: Set to true to traverse through symbolic links.
+
+:type preserveStats:bool
+:param preserveStats: Set to True to copy the source file stats to the destination.
+
+:type detailedResults:bool
+:param detailedResults: Set to True to include additional details in the results containing a list of all files and
+                        directories that were skipped or failed during the operation.
+
+:rtype:dict
+:return: Returns a dictionary containing the following stats:
+         'filesCopied':int, 'filesFailed':int, 'filesRemoved':int, 'filesSkipped':int, 'dirsCopied':int,
+         'dirsFailed':int, 'dirsRemoved':int, 'dirsSkipped':int
+         If detailedResults is set to True also includes the following:
+         'filesFailedList':list, 'filesRemovedList':list, 'filesSkippedList':list, 'dirsFailedList':list,
+         'dirsRemovedList':list, 'dirsSkippedList':list
+'''
+def mirror(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, excludeDirs=None, level=0,
+         followLinks=False, preserveStats=True, detailedResults=False):
+    # Attempt to copy everything
+    results = copy(src, dst, includeFiles=includeFiles, includeDirs=includeDirs, excludeFiles=excludeFiles,
+                       excludeDirs=excludeDirs, level=level, followLinks=followLinks, forceOverwrite=True,
+                       preserveStats=preserveStats, detailedResults=detailedResults)
+
+    # Add the additional stats not included by copy
+    results['filesRemoved'] = 0
+    results['dirsRemoved'] = 0
+    if (detailedResults):
+        results['filesRemovedList'] = []
+        results['dirsRemovedList'] = []
+
+    # Now traverse through the destination and remove anything not also in source
+    for root, dirs, files in os.walk(dst, topdown=False, followlinks=followLinks):
+        relRoot = os.path.relpath(root, dst)
+
+        # Go through the files in the directory and remove those not found in src
+        for file in files:
+            filePath = os.path.join(root, file)
+            relFilePath = os.path.join(relRoot, file)
+
+            srcFilePath = os.path.join(src, relFilePath)
+            if (not os.path.exists(srcFilePath)):
+                os.remove(filePath)
+                results['filesRemoved'] += 1
+                if (detailedResults):
+                    results['filesRemovedList'].append(relFilePath)
+
+        # Should the directory be deleted?
+        srcRoot = os.path.join(src, relRoot)
+        if (not os.path.exists(srcRoot)):
+            dirlist = os.listdir(root)
+            if (len(dirlist) == 0):
+                os.rmdir(root)
+                results['dirsRemoved'] += 1
+                if (detailedResults):
+                    results['dirsRemovedList'].append(relRoot)
+            else:
+                results['dirsFailed'] += 1
+                if (detailedResults):
+                    results['dirsFailedList'].append(relRoot)
+
+    return results
+
+'''
 Moves all files and folders from the given source directory to the destination.
 
 :type src:string
@@ -306,7 +401,7 @@ def move(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
                        preserveStats=preserveStats, detailedResults=True)
 
     # Delete the source tree. Don't remove anything that was in the list of failed or skipped files/dirs
-    for root, dirs, files in os.walk(src, False):
+    for root, dirs, files in os.walk(src, topdown=False):
         relRoot = os.path.relpath(root, src)
 
         deleteDir = True
@@ -364,6 +459,71 @@ def move(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
         results['dirsFailedList'] = copyResults['dirsFailedList']
         results['dirsSkippedList'] = copyResults['dirsSkippedList']
     
+    return results
+
+'''
+Synchronizes all files and folders between the two given paths.
+
+This is equivalent to making the following calls:
+copy(path1, path2)
+copy(path2, path1)
+
+:type path1:string
+:param path1: The first path to synchronize
+
+:type path2:string
+:param path2: The second path to synchronize
+
+:type includeFiles:array
+:param includeFiles: A list of regex patterns of files to include during the operation.
+                     Files not matching at least one pattern in the include list will be skipped.
+
+:type includeDirs:array
+:param includeDirs: A list of regex patterns of directory names to include during the operation.
+                    Directories not matching at least one pattern in the include list will be skipped.
+
+:type excludeFiles:array
+:param excludeFiles: A list of regex patterns of files to exclude during the operation.
+
+:type excludeDirs:array
+:param excludeDirs: A list of regex patterns of directory names to exclude during the operation.
+
+:type level:int
+:param level: The maximum depth to traverse in the source directory tree.
+               A value of 0 traverses the entire tree.
+               A positive value traverses N levels from the top with value 1 being the source root.
+               A negative value traverses N levels from the bottom of the source tree.
+
+:type followLinks:bool
+:param followLinks: Set to true to traverse through symbolic links.
+
+:type forceOverwrite:bool
+:param forceOverwrite: Set to true to overwrite destination files even if they are newer.
+
+:type preserveStats:bool
+:param preserveStats: Set to True to copy the source file stats to the destination.
+
+:type detailedResults:bool
+:param detailedResults: Set to True to include additional details in the results containing a list of all files and
+                        directories that were skipped or failed during the operation.
+
+:rtype:dict
+:return: Returns a dictionary containing the following stats:
+         'filesCopied':int, 'filesFailed':int, 'filesSkipped':int, 'dirsCopied':int, 'dirsFailed':int, 'dirsSkipped':int
+         If detailedResults is set to True also includes the following:
+         'filesFailedList':list, 'filesSkippedList':list, 'dirsFailedList':list, 'dirsSkippedList':list
+'''
+def sync(path1, path2, includeFiles=None, includeDirs=None, excludeFiles=None, excludeDirs=None, level=0,
+         followLinks=False, forceOverwrite=False, preserveStats=True, detailedResults=False):
+    results = copy(path1, path2, includeFiles=includeFiles, includeDirs=includeDirs, excludeFiles=excludeDirs,
+                   level=level, followLinks=followLinks, forceOverwrite=forceOverwrite, preserveStats=preserveStats,
+                   detailedResults=detailedResults)
+    results2 = copy(path2, path1, includeFiles=includeFiles, includeDirs=includeDirs, excludeFiles=excludeDirs,
+                   level=level, followLinks=followLinks, forceOverwrite=forceOverwrite, preserveStats=preserveStats,
+                   detailedResults=detailedResults)
+
+    # TODO diff results
+
     return results
 
 '''

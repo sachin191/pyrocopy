@@ -316,6 +316,54 @@ try:
     if (results['filesMoved'] != 8 and results['filesSkipped'] != 1):
         raise Exception("Failed to move with file excludes: test")
 
+    # check mirror
+    # create two trees of different structures to test with
+    pathA = os.path.join(tmpdir, "pathA")
+    subPathA1 = os.path.join(pathA, "subA1")
+    subPathA2 = os.path.join(pathA, "subA2")
+    subPathA21 = os.path.join(subPathA2, "subSubA1")
+    pyrocopy.mkdir(subPathA1)
+    pyrocopy.mkdir(subPathA21)
+    genRandomContents(os.path.join(pathA, "fileA1"), MAX_FILE_SIZE)
+    genRandomContents(os.path.join(subPathA1, "fileSubA1"), MAX_FILE_SIZE)
+    genRandomContents(os.path.join(subPathA1, "fileSubA1-2"), MAX_FILE_SIZE)
+    genRandomContents(os.path.join(subPathA2, "fileSubA2"), MAX_FILE_SIZE)
+    genRandomContents(os.path.join(subPathA21, "fileSubA21"), MAX_FILE_SIZE)
+
+    pathB = os.path.join(tmpdir, "pathB")
+    subPathB1 = os.path.join(pathB, "subB1")
+    subPathB11 = os.path.join(subPathB1, "subSubB1")
+    pyrocopy.mkdir(subPathB11)
+    genRandomContents(os.path.join(pathB, "fileB1"), MAX_FILE_SIZE)
+    genRandomContents(os.path.join(subPathB1, "fileSubB1"), MAX_FILE_SIZE)
+    genRandomContents(os.path.join(subPathB11, "fileSubB11"), MAX_FILE_SIZE)
+
+    # make a copy of our trees to keep them in tact for future tests
+    mirPathA = os.path.join(tmpdir, "mirrorA")
+    pyrocopy.copy(pathA, mirPathA)
+    mirPathB = os.path.join(tmpdir, "mirrorB")
+    pyrocopy.copy(pathB, mirPathB)
+
+    results = pyrocopy.mirror(mirPathA, mirPathB)
+    if (results['filesCopied'] != 5 or results['dirsCopied'] != 3 or results['filesRemoved'] != 3 or
+        results['dirsRemoved'] != 2):
+        raise Exception("Failed to mirror pathA to pathB")
+
+    # TODO test mirror params
+
+    # check sync
+    syncPathA = os.path.join(tmpdir, "syncA")
+    syncPathB = os.path.join(tmpdir, "syncB")
+    pyrocopy.copy(pathA, syncPathA)
+    pyrocopy.copy(pathB, syncPathB)
+
+    results = pyrocopy.sync(syncPathA, syncPathB)
+    # TODO test results
+
+    # clean up temp
+    logger.info("Deleting temp files...")
+    shutil.rmtree(tmpdir)
+
     logger.info("Tests complete!")
 
 except Exception as err:
