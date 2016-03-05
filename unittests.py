@@ -249,6 +249,60 @@ try:
             if (dir == "moredir"):
                 raise Exception("Failed to only exclude directory 'moredir'.")
 
+    # check move
+    shutil.rmtree(dst)
+    dst = os.path.join(tmpdir, os.path.basename(src)+"Moved")
+
+    results = pyrocopy.move(src, dst)
+    if (results['filesMoved'] != 24):
+        raise Exception("Failed to move all files")
+    if (os.path.exists(src) and os.listdir(src).count > 0):
+        raise Exception("Move did not delete source")
+
+    # check move depth level
+    results = pyrocopy.move(dst, src, level=1)
+    if (results['filesMoved'] != 6):
+        raise Exception("Failed to move at depth level 1.")
+    if (not os.path.exists(dst)):
+        raise Exception("Move with depth level 1 deleted whole tree!")
+    
+    results = pyrocopy.move(dst, src, level=-1)
+    if (results['filesMoved'] != 12):
+        raise Exception("Failed to move at depth level -1.")
+    if (not os.path.exists(dst)):
+        raise Exception("Move with depth level -1 deleted whole tree!")
+
+    # Move the rest of the files
+    results = pyrocopy.move(dst, src)
+    if (results['filesMoved'] != 6):
+        raise Exception("Failed to move remainder of files")
+    if (os.path.exists(dst)):
+        raise Exception("Move did not delete source")
+
+    # check move dir includes
+    includeDirs = ['dummydir']
+    results = pyrocopy.move(src, dst, includeDirs=includeDirs)
+    if (results['filesMoved'] != 8):
+        raise Exception("Failed move with dir includes: 'dummydir'")
+
+    # check move dir excludes
+    excludeDirs = ['moredir']
+    results = pyrocopy.move(src, dst, excludeDirs=excludeDirs)
+    if (results['filesMoved'] != 9 and results['filesSkipped'] != 5):
+        raise Exception("Failed to move with dir excludes: 'moredir'")
+
+    # check move file includes
+    includeFiles = ['f[0-9]+']
+    results = pyrocopy.move(src, dst, includeFiles=includeFiles)
+    if (results['filesMoved'] != 5 and results['filesSkipped'] != 2):
+        raise Exception("Failed to move with file includes: 'f[0-9]+'")
+
+    # check move file excludes
+    excludeFiles = ['test']
+    results = pyrocopy.move(src, dst, excludeFiles=excludeFiles)
+    if (results['filesMoved'] != 1 and results['filesSkipped'] != 1):
+        raise Exception("Failed to move with file excludes: test")
+
     logger.info("Tests complete!")
 
 except Exception as err:
