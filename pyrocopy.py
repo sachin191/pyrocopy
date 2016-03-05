@@ -324,17 +324,18 @@ def move(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
             # Attempt to delete all files in directory
             for file in files:
                 filePath = os.path.join(root, file)
+                relFilePath = os.path.join(relRoot, file)
                 if (not os.path.lexists(filePath)):
                     continue
 
                 deleteFile = True
                 # Was the file skipped or failed?
                 for failedFile in copyResults['filesFailedList']:
-                    if (filePath.lower() == failedFile.lower()):
+                    if (relFilePath.lower() == failedFile.lower()):
                         deleteFile = False
                         break
                 for skippedFile in copyResults['filesSkippedList']:
-                    if (filePath.lower() == skippedFile.lower()):
+                    if (relFilePath.lower() == skippedFile.lower()):
                         deleteFile = False
                         break
 
