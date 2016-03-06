@@ -126,12 +126,8 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
             if (not os.path.isdir(dst)):
                 mkdir(dst)
 
-            # Determine the max depth. We can do this easily by walking in reverse
-            maxDepth = 0
-            for root, dirs, files in os.walk(src, topdown=False, followlinks=followLinks):
-                relRoot = os.path.relpath(root, src)
-                maxDepth = relRoot.count(os.path.sep) + 1
-                break
+            # Determine the max depth.
+            maxDepth = _getTreeDepth(src)
             
             # Traverse the tree and begin copying
             for root, dirs, files in os.walk(src, topdown=(level >= 0), followlinks=followLinks):
@@ -304,7 +300,7 @@ def mirror(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exc
     # Attempt to copy everything
     results = copy(src, dst, includeFiles=includeFiles, includeDirs=includeDirs, excludeFiles=excludeFiles,
                        excludeDirs=excludeDirs, level=level, followLinks=followLinks, forceOverwrite=True,
-                       preserveStats=preserveStats, detailedResults=detailedResults)
+                       preserveStats=preserveStats, detailedResults=True)
 
     # Add the additional stats not included by copy
     results['filesRemoved'] = 0
@@ -313,35 +309,85 @@ def mirror(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exc
         results['filesRemovedList'] = []
         results['dirsRemovedList'] = []
 
+    # Determine the max depth of src so that we don't go beyond that level in dst (if they're different)
+    maxDepth = _getTreeDepth(src)
+
     # Now traverse through the destination and remove anything not also in source
     for root, dirs, files in os.walk(dst, topdown=False, followlinks=followLinks):
         relRoot = os.path.relpath(root, dst)
 
-        # Go through the files in the directory and remove those not found in src
-        for file in files:
-            filePath = os.path.join(root, file)
-            relFilePath = os.path.join(relRoot, file)
+        # Make sure we are removing files/dirs only at the desired depth
+        if (level != 0):
+            # Determine the current depth of relRoot
+            depth = 0
+            if (relRoot != '.'):
+                depth = relRoot.count(os.path.sep) + 1
 
-            srcFilePath = os.path.join(src, relFilePath)
-            if (not os.path.exists(srcFilePath)):
-                os.remove(filePath)
-                results['filesRemoved'] += 1
-                if (detailedResults):
-                    results['filesRemovedList'].append(relFilePath)
+            if (level < 0):
+                depth = maxDepth - depth
 
-        # Should the directory be deleted?
-        srcRoot = os.path.join(src, relRoot)
-        if (not os.path.exists(srcRoot)):
-            dirlist = os.listdir(root)
-            if (len(dirlist) == 0):
-                os.rmdir(root)
-                results['dirsRemoved'] += 1
-                if (detailedResults):
-                    results['dirsRemovedList'].append(relRoot)
-            else:
-                results['dirsFailed'] += 1
-                if (detailedResults):
-                    results['dirsFailedList'].append(relRoot)
+            # Now check the level
+            if (depth >= abs(level)):
+                continue
+
+        # Don't remove any dirs that are in the skipped or failed lists
+        dirSkipped = False
+        for skippedDir in results['dirsSkippedList']:
+            if (relRoot == skippedDir):
+                dirSkipped = True
+                break
+        if (not dirSkipped):
+            for skippedDir in results['dirsFailedList']:
+                if (relRoot == skippedDir):
+                    dirSkipped = True
+                    break
+
+        if (not dirSkipped):
+            # Go through the files in the directory and remove those not found in src and not skipped or failed
+            for file in files:
+                filePath = os.path.join(root, file)
+                relFilePath = os.path.join(relRoot, file)
+
+                # Was the file skipped or failed?
+                fileSkipped = False
+                for skippedFile in results['filesSkippedList']:
+                    if (relFilePath == skippedFile):
+                        fileSkipped = True
+                        break
+                if (not fileSkipped):
+                    for failedFile in results['filesFailedList']:
+                        if (relFilePath == failedFile):
+                            fileSkipped = True
+                            break
+
+                if (not fileSkipped):
+                    srcFilePath = os.path.join(src, relFilePath)
+                    if (not os.path.exists(srcFilePath)):
+                        os.remove(filePath)
+                        results['filesRemoved'] += 1
+                        if (detailedResults):
+                            results['filesRemovedList'].append(relFilePath)
+
+            # Should the directory be deleted?
+            srcRoot = os.path.join(src, relRoot)
+            if (not os.path.exists(srcRoot)):
+                dirlist = os.listdir(root)
+                if (len(dirlist) == 0):
+                    os.rmdir(root)
+                    results['dirsRemoved'] += 1
+                    if (detailedResults):
+                        results['dirsRemovedList'].append(relRoot)
+                else:
+                    results['dirsFailed'] += 1
+                    if (detailedResults):
+                        results['dirsFailedList'].append(relRoot)
+
+    # If detailedResults was not desired remove those entries from the results
+    if (not detailedResults):
+        results['filesFailedList'] = None
+        results['filesSkippedList'] = None
+        results['dirsFailedList'] = None
+        results['dirsSkippedList'] = None
 
     return results
 
@@ -740,3 +786,21 @@ def _displayCopyResults(results):
     logger.info("\tSkipped: %d", results['dirsSkipped'])
     logger.info("\tFailed: %d", results['dirsFailed'])
     logger.info("--------------------")
+
+'''
+Determines the maximum depth of the tree for a given path.
+
+:type path:string
+:param path: The path to compute the depth for.
+
+:rtype:int
+:return: The maximum depth of path.
+'''
+def _getTreeDepth(path):
+    maxDepth = 0
+    for root, dirs, files in os.walk(path):
+        relRoot = os.path.relpath(root, path)
+        depth = relRoot.count(os.path.sep) + 1
+        if (depth > maxDepth):
+            maxDepth = depth
+    return maxDepth

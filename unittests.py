@@ -344,10 +344,77 @@ try:
     mirPathB = os.path.join(tmpdir, "mirrorB")
     pyrocopy.copy(pathB, mirPathB)
 
+    # check basic mirror
     results = pyrocopy.mirror(mirPathA, mirPathB)
     if (results['filesCopied'] != 5 or results['dirsCopied'] != 3 or results['filesRemoved'] != 3 or
         results['dirsRemoved'] != 2):
         raise Exception("Failed to mirror pathA to pathB")
+
+    # check mirror with depth level 1
+    shutil.rmtree(mirPathB)
+    pyrocopy.copy(pathB, mirPathB)
+    results = pyrocopy.mirror(mirPathA, mirPathB, level=1)
+    if (results['filesCopied'] != 1 or results['filesRemoved'] != 1):
+        raise Exception("Failed mirror test with depth level 1")
+    if (not os.path.exists(os.path.join(mirPathB, "fileA1"))):
+        raise Exception("Failed mirror test with depth level 1")
+    if (os.path.exists(os.path.join(mirPathB, "fileB1"))):
+        raise Exception("Failed mirror test with depth level 1")
+
+    # check mirror with depth level -1
+    shutil.rmtree(mirPathB)
+    pyrocopy.copy(pathB, mirPathB)
+    results = pyrocopy.mirror(mirPathA, mirPathB, level=-1)
+    if (results['filesCopied'] != 1 or results['filesRemoved'] != 1):
+        raise Exception("Failed mirror test with depth level -1")
+    if (results['dirsCopied'] != 1 or results['dirsRemoved'] != 1):
+        raise Exception("Failed mirror test with depth level -1")
+    if (not os.path.exists(os.path.join(mirPathB, "subA2", "subSubA1", "fileSubA21"))):
+        raise Exception("Failed mirror test with depth level -1")
+    if (os.path.exists(os.path.join(mirPathB, "subB1", "subSubB1", "fileSubB11"))):
+        raise Exception("Failed mirror test with depth level -1")
+
+    # check mirror with depth level 2
+    shutil.rmtree(mirPathB)
+    pyrocopy.copy(pathB, mirPathB)
+    results = pyrocopy.mirror(mirPathA, mirPathB, level=2, detailedResults=True)
+    if (results['filesCopied'] != 4 or results['filesRemoved'] != 2):
+        raise Exception("Failed mirror test with depth level 2")
+    if (results['dirsCopied'] != 2 or results['dirsRemoved'] != 0):
+        raise Exception("Failed mirror test with depth level 2")
+    if (not os.path.exists(os.path.join(mirPathB, "fileA1"))):
+        raise Exception("Failed mirror test with depth level 2")
+    if (not os.path.exists(os.path.join(mirPathB, os.path.relpath(subPathA1, pathA), "fileSubA1"))):
+        raise Exception("Failed mirror test with depth level 2")
+    if (not os.path.exists(os.path.join(mirPathB, os.path.relpath(subPathA1, pathA), "fileSubA1-2"))):
+        raise Exception("Failed mirror test with depth level 2")
+    if (not os.path.exists(os.path.join(mirPathB, os.path.relpath(subPathA2, pathA), "fileSubA2"))):
+        raise Exception("Failed mirror test with depth level 2")
+    if (os.path.exists(os.path.join(mirPathB, "fileB1"))):
+        raise Exception("Failed mirror test with depth level 2")
+    if (os.path.exists(os.path.join(mirPathB, "subB1", "fileSubB1"))):
+        raise Exception("Failed mirror test with depth level 2")
+
+    # check mirror with depth level -2
+    shutil.rmtree(mirPathB)
+    pyrocopy.copy(pathB, mirPathB)
+    results = pyrocopy.mirror(mirPathA, mirPathB, level=-2, detailedResults=True)
+    if (results['filesCopied'] != 4 or results['filesRemoved'] != 2):
+        raise Exception("Failed mirror test with depth level -2")
+    if (results['dirsCopied'] != 3 or results['dirsRemoved'] != 2):
+        raise Exception("Failed mirror test with depth level -2")
+    if (not os.path.exists(os.path.join(mirPathB, os.path.relpath(subPathA1, pathA), "fileSubA1"))):
+        raise Exception("Failed mirror test with depth level -2")
+    if (not os.path.exists(os.path.join(mirPathB, os.path.relpath(subPathA1, pathA), "fileSubA1-2"))):
+        raise Exception("Failed mirror test with depth level -2")
+    if (not os.path.exists(os.path.join(mirPathB, os.path.relpath(subPathA2, pathA), "fileSubA2"))):
+        raise Exception("Failed mirror test with depth level -2")
+    if (not os.path.exists(os.path.join(mirPathB, os.path.relpath(subPathA21, pathA), "fileSubA21"))):
+        raise Exception("Failed mirror test with depth level -2")
+    if (os.path.exists(os.path.join(mirPathB, "subB1", "fileSubB1"))):
+        raise Exception("Failed mirror test with depth level -2")
+    if (os.path.exists(os.path.join(mirPathB, "subB1", "subSubB1", "fileSubB11"))):
+        raise Exception("Failed mirror test with depth level -2")
 
     # TODO test mirror params
 
