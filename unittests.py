@@ -135,6 +135,11 @@ try:
     else:
         raise Exception("mkdirTestPath already exists!")
 
+    # _getTreeDepth test
+    depth = pyrocopy._getTreeDepth(os.path.join(tmpdir, "Level1"))
+    if (depth != 3):
+        raise Exception("Failed to get maximum depth of tree: Level1")
+
     # copy test
     logger.info("Testing pyrocopy.copy() ...")
     numFiles = 30
