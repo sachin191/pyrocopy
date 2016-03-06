@@ -416,7 +416,93 @@ try:
     if (os.path.exists(os.path.join(mirPathB, "subB1", "subSubB1", "fileSubB11"))):
         raise Exception("Failed mirror test with depth level -2")
 
-    # TODO test mirror params
+    # check mirror with file includes
+    shutil.rmtree(mirPathB)
+    pyrocopy.copy(pathB, mirPathB)
+    includeFiles = ['.*A1.*']
+    results = pyrocopy.mirror(mirPathA, mirPathB, includeFiles=includeFiles, detailedResults=True)
+    if (results['filesCopied'] != 3 or results['filesSkipped'] != 2):
+        raise Exception("Failed mirror test with file includes: '.*A1.*'")
+    if (results['filesRemoved'] != 3 or results['dirsRemoved'] != 2):
+        raise Exception("Failed mirror test with file includes: '.*A1.*'")
+    if (not os.path.exists(os.path.join(mirPathB, "fileA1"))):
+        raise Exception("Failed mirror test with file includes: '.*A1.*'")
+    if (not os.path.exists(os.path.join(mirPathB, os.path.relpath(subPathA1, pathA), "fileSubA1"))):
+        raise Exception("Failed mirror test with file includes: '.*A1.*'")
+    if (not os.path.exists(os.path.join(mirPathB, os.path.relpath(subPathA1, pathA), "fileSubA1-2"))):
+        raise Exception("Failed mirror test with file includes: '.*A1.*'")
+    if (os.path.exists(os.path.join(mirPathB, "fileB1"))):
+        raise Exception("Failed mirror test with file includes: '.*A1.*'")
+    if (os.path.exists(os.path.join(mirPathB, "subB1", "fileSubB1"))):
+        raise Exception("Failed mirror test with file includes: '.*A1.*'")
+    if (os.path.exists(os.path.join(mirPathB, "subB1", "subSubB1", "fileSubB11"))):
+        raise Exception("Failed mirror test with file includes: '.*A1.*'")
+
+    # check mirror with file excludes
+    shutil.rmtree(mirPathB)
+    pyrocopy.copy(pathB, mirPathB)
+    excludeFiles = ['fileA1.*', 'fileSubA1.*']
+    results = pyrocopy.mirror(mirPathA, mirPathB, excludeFiles=excludeFiles, detailedResults=True)
+    if (results['filesCopied'] != 2 or results['filesSkipped'] != 3):
+        raise Exception("Failed mirror test with file excludes: 'fileA1.*', 'fileSubA1.*'")
+    if (not os.path.exists(os.path.join(mirPathB, os.path.relpath(subPathA2, pathA), "fileSubA2"))):
+        raise Exception("Failed mirror test with file excludes: 'fileA1.*', 'fileSubA1.*'")
+    if (not os.path.exists(os.path.join(mirPathB, os.path.relpath(subPathA21, pathA), "fileSubA21"))):
+        raise Exception("Failed mirror test with file excludes: 'fileA1.*', 'fileSubA1.*'")
+    if (os.path.exists(os.path.join(mirPathB, "fileB1"))):
+        raise Exception("Failed mirror test with file excludes: 'fileA1.*', 'fileSubA1.*'")
+    if (os.path.exists(os.path.join(mirPathB, "subB1", "fileSubB1"))):
+        raise Exception("Failed mirror test with file excludes: 'fileA1.*', 'fileSubA1.*'")
+    if (os.path.exists(os.path.join(mirPathB, "subB1", "subSubB1", "fileSubB11"))):
+        raise Exception("Failed mirror test with file excludes: 'fileA1.*', 'fileSubA1.*'")
+    
+    # check mirror with dir includes
+    shutil.rmtree(mirPathB)
+    pyrocopy.copy(pathB, mirPathB)
+    includeDirs = ['subA1']
+    results = pyrocopy.mirror(mirPathA, mirPathB, includeDirs=includeDirs, detailedResults=True)
+    if (results['filesCopied'] != 3 or results['dirsSkipped'] != 2):
+        raise Exception("Failed mirror test with dir includes: 'subA1'")
+    if (results['filesRemoved'] != 3 or results['dirsRemoved'] != 2):
+        raise Exception("Failed mirror test with dir includes: 'subA1'")
+    if (not os.path.exists(os.path.join(mirPathB, "fileA1"))):
+        raise Exception("Failed mirror test with dir includes: 'subA1'")
+    if (not os.path.exists(os.path.join(mirPathB, os.path.relpath(subPathA1, pathA), "fileSubA1"))):
+        raise Exception("Failed mirror test with dir includes: 'subA1'")
+    if (not os.path.exists(os.path.join(mirPathB, os.path.relpath(subPathA1, pathA), "fileSubA1-2"))):
+        raise Exception("Failed mirror test with dir includes: 'subA1'")
+    if (os.path.exists(os.path.join(mirPathB, "fileB1"))):
+        raise Exception("Failed mirror test with dir includes: 'subA1'")
+    if (os.path.exists(os.path.join(mirPathB, "subB1", "fileSubB1"))):
+        raise Exception("Failed mirror test with dir includes: 'subA1'")
+    if (os.path.exists(os.path.join(mirPathB, "subB1", "subSubB1", "fileSubB11"))):
+        raise Exception("Failed mirror test with dir includes: 'subA1'")
+
+    # check mirror with dir excludes
+    shutil.rmtree(mirPathB)
+    pyrocopy.copy(pathB, mirPathB)
+    excludeDirs = ['subSubA1']
+    results = pyrocopy.mirror(mirPathA, mirPathB, excludeDirs=excludeDirs, detailedResults=True)
+    if (results['filesCopied'] != 4 or results['dirsSkipped'] != 1):
+        raise Exception("Failed mirror test with dir excludes: 'subSubA1'")
+    if (results['filesRemoved'] != 3 or results['dirsRemoved'] != 2):
+        raise Exception("Failed mirror test with dir excludes: 'subSubA1'")
+    if (not os.path.exists(os.path.join(mirPathB, "fileA1"))):
+        raise Exception("Failed mirror test with dir excludes: 'subSubA1'")
+    if (not os.path.exists(os.path.join(mirPathB, os.path.relpath(subPathA1, pathA), "fileSubA1"))):
+        raise Exception("Failed mirror test with dir excludes: 'subSubA1'")
+    if (not os.path.exists(os.path.join(mirPathB, os.path.relpath(subPathA1, pathA), "fileSubA1-2"))):
+        raise Exception("Failed mirror test with dir excludes: 'subSubA1'")
+    if (not os.path.exists(os.path.join(mirPathB, os.path.relpath(subPathA2, pathA), "fileSubA2"))):
+        raise Exception("Failed mirror test with dir excludes: 'subSubA1'")
+    if (os.path.exists(os.path.join(mirPathB, os.path.relpath(subPathA21, pathA), "fileSubA21"))):
+        raise Exception("Failed mirror test with dir excludes: 'subSubA1'")
+    if (os.path.exists(os.path.join(mirPathB, "fileB1"))):
+        raise Exception("Failed mirror test with dir excludes: 'subSubA1'")
+    if (os.path.exists(os.path.join(mirPathB, "subB1", "fileSubB1"))):
+        raise Exception("Failed mirror test with dir excludes: 'subSubA1'")
+    if (os.path.exists(os.path.join(mirPathB, "subB1", "subSubB1", "fileSubB11"))):
+        raise Exception("Failed mirror test with dir excludes: 'subSubA1'")
 
     # check sync
     syncPathA = os.path.join(tmpdir, "syncA")
