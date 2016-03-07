@@ -520,8 +520,42 @@ try:
     pyrocopy.copy(pathA, syncPathA)
     pyrocopy.copy(pathB, syncPathB)
 
-    results = pyrocopy.sync(syncPathA, syncPathB)
-    # TODO test results
+    results = pyrocopy.sync(syncPathA, syncPathB, preserveStats=PRESERVE_TIMESTAMPS)
+    if (results['filesCopied'] != 8 and results['dirsCopied'] != 5):
+        raise Exception("Failed sync test")
+    if (results['filesSkipped'] != 0 and results['dirsSkipped'] != 0):
+        raise Exception("Failed sync test")
+    if (results['filesFailed'] != 0 and results['dirsFailed'] != 0):
+        raise Exception("Failed sync test")
+
+    shutil.rmtree(syncPathA)
+    shutil.rmtree(syncPathB)
+    pyrocopy.copy(pathA, syncPathA)
+    pyrocopy.copy(pathB, syncPathB)
+    pyrocopy.copy(os.path.join(pathA, "fileA1"), os.path.join(pathB, "fileA1"))
+    pyrocopy.copy(os.path.join(pathB, "fileB1"), os.path.join(pathA, "fileB1"))
+
+    results = pyrocopy.sync(syncPathA, syncPathB, preserveStats=PRESERVE_TIMESTAMPS)
+    if (results['filesCopied'] != 8 and results['dirsCopied'] != 5):
+        raise Exception("Failed sync test with two skipped files")
+    if (results['filesSkipped'] != 2 and results['dirsSkipped'] != 0):
+        raise Exception("Failed sync test with two skipped files")
+    if (results['filesFailed'] != 0 and results['dirsFailed'] != 0):
+        raise Exception("Failed sync test with two skipped files")
+
+    shutil.rmtree(syncPathA)
+    shutil.rmtree(syncPathB)
+    pyrocopy.copy(pathA, syncPathA)
+    pyrocopy.copy(pathB, syncPathB)
+    pyrocopy.copy(os.path.join(pathB, "subB1", "subSubB1", "fileSubB11"), os.path.join(pathA, "subB1", "subSubB1", "fileSubB11"))
+
+    results = pyrocopy.sync(syncPathA, syncPathB, preserveStats=PRESERVE_TIMESTAMPS)
+    if (results['filesCopied'] != 8 and results['dirsCopied'] != 5):
+        raise Exception("Failed sync test with two skipped files")
+    if (results['filesSkipped'] != 1 and results['dirsSkipped'] != 2):
+        raise Exception("Failed sync test with two skipped files")
+    if (results['filesFailed'] != 0 and results['dirsFailed'] != 0):
+        raise Exception("Failed sync test with two skipped files")
 
     # clean up temp
     logger.info("Deleting temp files...")

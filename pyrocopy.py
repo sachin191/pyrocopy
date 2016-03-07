@@ -64,7 +64,8 @@ Copies all files and folders from the given source directory to the destination.
 :return: Returns a dictionary containing the following stats:
          'filesCopied':int, 'filesFailed':int, 'filesSkipped':int, 'dirsCopied':int, 'dirsFailed':int, 'dirsSkipped':int
          If detailedResults is set to True also includes the following:
-         'filesFailedList':list, 'filesSkippedList':list, 'dirsFailedList':list, 'dirsSkippedList':list
+         'filesCopiedList':list, 'filesFailedList':list, 'filesSkippedList':list,
+         'dirsCopiedList':list, 'dirsFailedList':list, 'dirsSkippedList':list
 '''
 def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, excludeDirs=None, level=0,
          followLinks=False, forceOverwrite=False, preserveStats=True, detailedResults=False):
@@ -77,8 +78,10 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
     results['dirsFailed'] = 0
     results['dirsSkipped'] = 0
     if (detailedResults):
+        results['filesCopiedList'] = []
         results['filesFailedList'] = []
         results['filesSkippedList'] = []
+        results['dirsCopiedList'] = []
         results['dirsFailedList'] = []
         results['dirsSkippedList'] = []
     
@@ -112,6 +115,8 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
             if (result == 1):
                 logger.info("Copied: %s => %s", src, dst)
                 results['filesCopied'] += 1
+                if (detailedResults):
+                    results['filesCopiedList'].append(src)
             elif (result == 0):
                 logger.info("Skipped: %s", src)
                 results['filesSkipped'] += 1
@@ -180,6 +185,8 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
                 if (relRoot != '.'):
                     if (os.path.isdir(dstRoot)):
                         results['dirsCopied'] += 1
+                        if (detailedResults):
+                            results['dirsCopiedList'].append(dstRoot)
                     else:
                         logger.exception("Failed: %s", dstRoot)
                         results['dirsFailed'] += 1
@@ -199,6 +206,8 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
                     if (result == 1):
                         logger.info("Copied: %s => %s", filePath, dstFullPath)
                         results['filesCopied'] += 1
+                        if (detailedResults):
+                            results['filesCopiedList'].append(filePath)
                     elif (result == 0):
                         logger.info("Skipped: %s", filePath)
                         results['filesSkipped'] += 1
@@ -293,8 +302,8 @@ destination and removes any file or directory present in the destination that is
          'filesCopied':int, 'filesFailed':int, 'filesRemoved':int, 'filesSkipped':int, 'dirsCopied':int,
          'dirsFailed':int, 'dirsRemoved':int, 'dirsSkipped':int
          If detailedResults is set to True also includes the following:
-         'filesFailedList':list, 'filesRemovedList':list, 'filesSkippedList':list, 'dirsFailedList':list,
-         'dirsRemovedList':list, 'dirsSkippedList':list
+         'filesCopiedList':list, 'filesFailedList':list, 'filesRemovedList':list, 'filesSkippedList':list,
+         'dirsCopiedList':list, 'dirsFailedList':list, 'dirsRemovedList':list, 'dirsSkippedList':list
 '''
 def mirror(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, excludeDirs=None, level=0,
          followLinks=False, preserveStats=True, detailedResults=False):
@@ -385,8 +394,10 @@ def mirror(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exc
 
     # If detailedResults was not desired remove those entries from the results
     if (not detailedResults):
+        results['filesCopiedList'] = None
         results['filesFailedList'] = None
         results['filesSkippedList'] = None
+        results['dirsCopiedList'] = None
         results['dirsFailedList'] = None
         results['dirsSkippedList'] = None
 
@@ -438,7 +449,8 @@ Moves all files and folders from the given source directory to the destination.
 :return: Returns a dictionary containing the following stats:
          'filesMoved', 'filesFailed', 'filesSkipped', 'dirsMoved', 'dirsFailed', 'dirsSkipped'
          If detailedResults is set to True also includes the following:
-         'filesFailedList':list, 'filesSkippedList':list, 'dirsFailedList':list, 'dirsSkippedList':list
+         'filesMovedList':list, 'filesFailedList':list, 'filesSkippedList':list,
+         'dirsMovedList':list, 'dirsFailedList':list, 'dirsSkippedList':list
 '''
 def move(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, excludeDirs=None, level=0,
          followLinks=False, forceOverwrite=False, preserveStats=True, detailedResults=False):
@@ -501,8 +513,10 @@ def move(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
     results['dirsMoved'] = copyResults['dirsFailed']
     results['dirsSkipped'] = copyResults['dirsSkipped']
     if (detailedResults):
+        results['filesMovedList'] = copyResults['filesCopiedList']
         results['filesFailedList'] = copyResults['filesFailedList']
         results['filesSkippedList'] = copyResults['filesSkippedList']
+        results['dirsMovedList'] = copyResults['dirsCopiedList']
         results['dirsFailedList'] = copyResults['dirsFailedList']
         results['dirsSkippedList'] = copyResults['dirsSkippedList']
     
@@ -564,12 +578,77 @@ def sync(path1, path2, includeFiles=None, includeDirs=None, excludeFiles=None, e
          followLinks=False, forceOverwrite=False, preserveStats=True, detailedResults=False):
     results = copy(path1, path2, includeFiles=includeFiles, includeDirs=includeDirs, excludeFiles=excludeDirs,
                    level=level, followLinks=followLinks, forceOverwrite=forceOverwrite, preserveStats=preserveStats,
-                   detailedResults=detailedResults)
+                   detailedResults=True)
     results2 = copy(path2, path1, includeFiles=includeFiles, includeDirs=includeDirs, excludeFiles=excludeDirs,
                    level=level, followLinks=followLinks, forceOverwrite=forceOverwrite, preserveStats=preserveStats,
-                   detailedResults=detailedResults)
+                   detailedResults=True)
+    
+    # Add new entries from results2 to the various lists of results
+    for dpath in results2['filesCopiedList']:
+        addPath = True
+        for spath in results['filesCopiedList']:
+            if (spath == dpath):
+                addPath = False
+                break
+        if (addPath):
+            results['filesCopiedList'].append(dpath)
+    for dpath in results2['filesFailedList']:
+        addPath = True
+        for spath in results['filesFailedList']:
+            if (spath == dpath):
+                addPath = False
+                break
+        if (addPath):
+            results['filesFailedList'].append(dpath)
+    for dpath in results2['filesSkippedList']:
+        addPath = True
+        for spath in results['filesSkippedList']:
+            if (spath == dpath):
+                addPath = False
+                break
+        if (addPath):
+            results['filesSkippedList'].append(dpath)
+    for dpath in results2['dirsCopiedList']:
+        addPath = True
+        for spath in results['dirsCopiedList']:
+            if (spath == dpath):
+                addPath = False
+                break
+        if (addPath):
+            results['dirsCopiedList'].append(dpath)
+    for dpath in results2['dirsFailedList']:
+        addPath = True
+        for spath in results['dirsFailedList']:
+            if (spath == dpath):
+                addPath = False
+                break
+        if (addPath):
+            results['dirsFailedList'].append(dpath)
+    for dpath in results2['dirsSkippedList']:
+        addPath = True
+        for spath in results['dirsSkippedList']:
+            if (spath == dpath):
+                addPath = False
+                break
+        if (addPath):
+            results['dirsSkippedList'].append(dpath)
 
-    # TODO diff results
+    # Update the stats
+    results['filesCopied'] = len(results['filesCopiedList'])
+    results['filesFailed'] = len(results['filesFailedList'])
+    results['filesSkipped'] = len(results['filesSkippedList'])
+    results['dirsCopied'] = len(results['dirsCopiedList'])
+    results['dirsFailed'] = len(results['dirsFailedList'])
+    results['dirsSkipped'] = len(results['dirsSkippedList'])
+
+    # If detailedResults was not desired remove those entries from the results
+    if (not detailedResults):
+        results['filesCopiedList'] = None
+        results['filesFailedList'] = None
+        results['filesSkippedList'] = None
+        results['dirsCopiedList'] = None
+        results['dirsFailedList'] = None
+        results['dirsSkippedList'] = None
 
     return results
 
@@ -672,6 +751,11 @@ def _copyFile(src, dst, includes=None, excludes=None, showProgress=True, forceOv
     # Don't overwrite older copies of files unless explicitly desired
     if (not forceOverwrite and os.path.exists(dst) and os.path.getmtime(dst) >= os.path.getmtime(src)):
         return 0
+
+    # Make sure the directory at the destination exists
+    dstRoot = os.path.split(dst)[0]
+    if (not os.path.isdir(dstRoot)):
+        mkdir(dstRoot)
 
     # Finally perform the copy
     logger.info("Copying: %s => %s", src, dst)
