@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 Robust file utilities for Python inspired by Windows' robocopy.
 
@@ -10,6 +11,16 @@ import os
 import re
 import stat
 import sys
+
+'''
+The version of this script as an int tuple (major, minor, patch).
+'''
+__version__ = (0, 6, 1)
+
+'''
+The version of this script as a string. (e.g. '1.0.0')
+'''
+__version_str__ = '.'.join([str(__version__[0]), str(__version__[1]), str(__version__[2])])
 
 '''
 The logger used to report information and progress during operations.
@@ -187,12 +198,12 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
                     if (os.path.isdir(dstRoot)):
                         results['dirsCopied'] += 1
                         if (detailedResults):
-                            results['dirsCopiedList'].append(dstRoot)
+                            results['dirsCopiedList'].append(relRoot)
                     else:
-                        logger.exception("Failed: %s", dstRoot)
+                        logger.exception("Failed: %s", relRoot)
                         results['dirsFailed'] += 1
                         if (detailedResults):
-                            results['dirsFailedList'].append(dstRoot)
+                            results['dirsFailedList'].append(relRoot)
                         continue
         
                 for file in files:
@@ -291,6 +302,9 @@ destination and removes any file or directory present in the destination that is
 :type followLinks:bool
 :param followLinks: Set to true to traverse through symbolic links.
 
+:type forceOverwrite:bool
+:param forceOverwrite: Set to true to overwrite destination files even if they are newer.
+
 :type preserveStats:bool
 :param preserveStats: Set to True to copy the source file stats to the destination.
 
@@ -307,10 +321,10 @@ destination and removes any file or directory present in the destination that is
          'dirsCopiedList':list, 'dirsFailedList':list, 'dirsRemovedList':list, 'dirsSkippedList':list
 '''
 def mirror(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, excludeDirs=None, level=0,
-         followLinks=False, preserveStats=True, detailedResults=False):
+         followLinks=False, forceOverwrite=False, preserveStats=True, detailedResults=False):
     # Attempt to copy everything
     results = copy(src, dst, includeFiles=includeFiles, includeDirs=includeDirs, excludeFiles=excludeFiles,
-                       excludeDirs=excludeDirs, level=level, followLinks=followLinks, forceOverwrite=True,
+                       excludeDirs=excludeDirs, level=level, followLinks=followLinks, forceOverwrite=forceOverwrite,
                        preserveStats=preserveStats, detailedResults=True)
 
     # Add the additional stats not included by copy
@@ -875,6 +889,9 @@ Prints a table showing the results of a copy operation to the INFO log.
 :param results: The dictionary containing the copy results to display.
 '''
 def _displayCopyResults(results):
+    if (logging.getLevelName() > logging.ERROR):
+        return
+    
     logger.info("--------------------")
     logger.info("Files:")
     logger.info("\tCopied: %d", results['filesCopied'])
@@ -906,39 +923,57 @@ def _getTreeDepth(path):
     return maxDepth
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(usage="pyrocopy [OPTIONS] <source> <destination>", description='A robust file copying utility for Python.')
+    parser = argparse.ArgumentParser(description='A robust file copying utility for Python.')
+
+    copymode_group = parser.add_argument_group('copy mode')
+    mode_group = copymode_group.add_mutually_exclusive_group()
+    mode_group.add_argument("--mirror", action='store_true', required=False, help="Creates an exact copy of source to the destination removing any files or directories in destination not also contained in source.")
+    mode_group.add_argument("--move", action='store_true', required=False, help="Moves all files and directories from source to destination (delete from source after copying).")
+    mode_group.add_argument("--sync", action='store_true', required=False, help="Performs a bi-directional copy of the contents of source and destination to contain the exact same set of files and directories in both locations.")
+
+    copy_group = parser.add_argument_group('copy options')
+    copy_group.add_argument("-f", "--force", action='store_true', required=False, help="Overwrites all files in destination from source even if newer.")
+    copy_group.add_argument("--nostat", action='store_true', required=False, help="Do not copy file stats (mode bits, atime, mtime, flags)")
+    
+    select_group = parser.add_argument_group('selection options')
+    select_group.add_argument("-if", "--includefiles", nargs='+', type=str, required=False, help="A list of regular expressions for file inclusions")
+    select_group.add_argument("-id", "--includedirs", nargs='+', type=str, required=False, help="A list of regular expressions for directory inclusions")
+    select_group.add_argument("-xf", "--excludefiles", nargs='+', type=str, required=False, help="A list of regular expressions for file exclusions")
+    select_group.add_argument("-xd", "--excludedirs", nargs='+', type=str, required=False, help="A list of regular expressions for directory exclusions")
+    select_group.add_argument("-l", "--level", type=int, required=False, help="The maximum depth level to traverse during the copy, starting from the source root. A negative value starts from the furthest node from the source root.")
+    select_group.add_argument("-fl", "--followlinks", action='store_true', required=False, help="Traverses symbolic links as directories instead of copying the link.")
+    
+    log_group = parser.add_argument_group('logging options')
+    log_exc_group = log_group.add_mutually_exclusive_group()
+    log_exc_group.add_argument("-q", "--quiet", action='count', default=0, required=False, help="Shows less output during the operation.")
+    log_exc_group.add_argument("-v", "--verbose", action='count', default=0, required=False, help="Shows more output during the operation.")
+
+    parser.add_argument("--version", action='version', version="%(prog)s " + __version_str__)
+
     parser.add_argument("source", type=str, help="The path to copy contents from")
     parser.add_argument("destination", type=str, help="The path to copy contents to")
-    parser.add_argument_group('OPTIONS')
-    parser.add_argument_group('copy options')
-    parser.add_argument("--mir", action='store_true', required=False, help="Creates an exact copy of source to the destination removing any files or directories in destination not also contained in source.")
-    parser.add_argument("--sync", action='store_true', required=False, help="Performs a bi-directional copy of the contents of source and destination to contain the exact same set of files and directories in both locations.")
-    parser.add_argument("--force", action='store_true', required=False, help="Overwrites all files in destination from source even if newer.")
-    parser.add_argument_group('selection options')
-    parser.add_argument("--if", nargs='+', type=str, required=False, help="A list of regular expressions for file inclusions")
-    parser.add_argument("--id", nargs='+', type=str, required=False, help="A list of regular expressions for directory inclusions")
-    parser.add_argument("--xf", nargs='+', type=str, required=False, help="A list of regular expressions for file exclusions")
-    parser.add_argument("--xd", nargs='+', type=str, required=False, help="A list of regular expressions for directory exclusions")
-    parser.add_argument("--level", type=int, required=False, help="The maximum depth to traverse during the copy.")
-    parser.add_argument("--silent", action='store_true', help="Shows little to no output during the operation.")
 
     args = parser.parse_args()
 
     # Set up logger
     logger.addHandler(logging.StreamHandler())
-    if (args.silent):
-        logger.setLevel(logging.ERROR)
-    else:
-        logger.setLevel(logging.INFO)
+
+    # Default log level is INFO. Change the level up/down depending on the option chosen.
+    logger.setLevel(logging.INFO)
+    if (args.quiet > 0):
+        logger.setLevel(logging.INFO + (args.quiet * 10))
+    elif (args.verbose > 0):
+        logger.setLevel(logging.INFO - (args.verbose * 10))
 
     # Perform the desired operation
     results = None
-    if (args.mir):
-        results = mirror(args.source, args.destination, level=args.level, forceOverwrite=args.force)
+    if (args.mirror):
+        results = mirror(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=excludedirs, level=args.depth, followLinks=followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
+    elif (args.move):
+        results = move(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=excludedirs, level=args.depth, followLinks=followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
     elif (args.sync):
-        results = sync(args.source, args.destination, level=args.level, forceOverwrite=args.force)
+        results = sync(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=excludedirs, level=args.depth, followLinks=followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
     else:
-        results = copy(args.source, args.destination, level=args.level, forceOverwrite=args.force)
+        results = copy(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=excludedirs, level=args.depth, followLinks=followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
 
-    if (not args.silent):
-        _displayCopyResults(results)
+    _displayCopyResults(results)

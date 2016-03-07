@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 Copyright (C) 2016 Jean-Philippe Steinmetz
 '''
@@ -300,7 +301,7 @@ try:
     # check move dir excludes
     excludeDirs = ['moredir']
     results = pyrocopy.move(src, dst, excludeDirs=excludeDirs)
-    if (results['filesMoved'] != 11 and results['dirsSkipped'] != 1):
+    if (results['filesMoved'] != 11 or results['dirsSkipped'] != 1):
         raise Exception("Failed to move with dir excludes: 'moredir'")
     if (not os.path.exists(dst)):
         raise Exception("Move with dir excludes deleted whole tree!")
@@ -315,7 +316,7 @@ try:
     # check move file includes
     includeFiles = ['f[0-9]+']
     results = pyrocopy.move(dst, src, includeFiles=includeFiles)
-    if (results['filesMoved'] != 15 and results['filesSkipped'] != 9):
+    if (results['filesMoved'] != 15 or results['filesSkipped'] != 9):
         raise Exception("Failed to move with file includes: 'f[0-9]+'")
     if (not os.path.exists(dst)):
         raise Exception("Move with file includes deleted whole tree!")
@@ -323,7 +324,7 @@ try:
     # check move file excludes
     excludeFiles = ['test']
     results = pyrocopy.move(dst, src, excludeFiles=excludeFiles)
-    if (results['filesMoved'] != 8 and results['filesSkipped'] != 1):
+    if (results['filesMoved'] != 8 or results['filesSkipped'] != 1):
         raise Exception("Failed to move with file excludes: test")
 
     # check mirror
@@ -521,41 +522,52 @@ try:
     pyrocopy.copy(pathB, syncPathB)
 
     results = pyrocopy.sync(syncPathA, syncPathB, preserveStats=PRESERVE_TIMESTAMPS)
-    if (results['filesCopied'] != 8 and results['dirsCopied'] != 5):
+    if (results['filesCopied'] != 8 or results['dirsCopied'] != 5):
         raise Exception("Failed sync test")
-    if (results['filesSkipped'] != 0 and results['dirsSkipped'] != 0):
+    if (results['filesSkipped'] != 0 or results['dirsSkipped'] != 0):
         raise Exception("Failed sync test")
-    if (results['filesFailed'] != 0 and results['dirsFailed'] != 0):
+    if (results['filesFailed'] != 0 or results['dirsFailed'] != 0):
         raise Exception("Failed sync test")
 
     shutil.rmtree(syncPathA)
     shutil.rmtree(syncPathB)
     pyrocopy.copy(pathA, syncPathA)
     pyrocopy.copy(pathB, syncPathB)
-    pyrocopy.copy(os.path.join(pathA, "fileA1"), os.path.join(pathB, "fileA1"))
-    pyrocopy.copy(os.path.join(pathB, "fileB1"), os.path.join(pathA, "fileB1"))
+    pyrocopy.copy(os.path.join(syncPathA, "fileA1"), os.path.join(syncPathB, "fileA1"))
+    pyrocopy.copy(os.path.join(syncPathB, "fileB1"), os.path.join(syncPathA, "fileB1"))
 
-    results = pyrocopy.sync(syncPathA, syncPathB, preserveStats=PRESERVE_TIMESTAMPS)
-    if (results['filesCopied'] != 8 and results['dirsCopied'] != 5):
-        raise Exception("Failed sync test with two skipped files")
-    if (results['filesSkipped'] != 2 and results['dirsSkipped'] != 0):
-        raise Exception("Failed sync test with two skipped files")
-    if (results['filesFailed'] != 0 and results['dirsFailed'] != 0):
-        raise Exception("Failed sync test with two skipped files")
+    results = pyrocopy.sync(syncPathA, syncPathB, preserveStats=PRESERVE_TIMESTAMPS, detailedResults=True)
+    if (PRESERVE_TIMESTAMPS):
+        if (results['filesCopied'] != 6 or results['dirsCopied'] != 5):
+            raise Exception("Failed sync test with two skipped files")
+        if (results['filesSkipped'] != 2 or results['dirsSkipped'] != 0):
+            raise Exception("Failed sync test with two skipped files")
+        if (results['filesFailed'] != 0 or results['dirsFailed'] != 0):
+            raise Exception("Failed sync test with two skipped files")
+    else:
+        # Since timestamps can't be trusted only check for explicit failures
+        if (results['filesFailed'] != 0 or results['dirsFailed'] != 0):
+            raise Exception("Failed sync test with two skipped files")
 
     shutil.rmtree(syncPathA)
     shutil.rmtree(syncPathB)
     pyrocopy.copy(pathA, syncPathA)
     pyrocopy.copy(pathB, syncPathB)
-    pyrocopy.copy(os.path.join(pathB, "subB1", "subSubB1", "fileSubB11"), os.path.join(pathA, "subB1", "subSubB1", "fileSubB11"))
+    pyrocopy.copy(os.path.join(syncPathB, "subB1", "subSubB1", "fileSubB11"), os.path.join(syncPathA, "subB1", "subSubB1", "fileSubB11"))
 
-    results = pyrocopy.sync(syncPathA, syncPathB, preserveStats=PRESERVE_TIMESTAMPS)
-    if (results['filesCopied'] != 8 and results['dirsCopied'] != 5):
-        raise Exception("Failed sync test with two skipped files")
-    if (results['filesSkipped'] != 1 and results['dirsSkipped'] != 2):
-        raise Exception("Failed sync test with two skipped files")
-    if (results['filesFailed'] != 0 and results['dirsFailed'] != 0):
-        raise Exception("Failed sync test with two skipped files")
+    results = pyrocopy.sync(syncPathA, syncPathB, preserveStats=PRESERVE_TIMESTAMPS, detailedResults=True)
+    if (PRESERVE_TIMESTAMPS):
+        if (results['filesCopied'] != 7 or results['dirsCopied'] != 3):
+            raise Exception("Failed sync test with two skipped files")
+        if (results['filesSkipped'] != 1 or results['dirsSkipped'] != 2):
+            raise Exception("Failed sync test with two skipped files")
+        if (results['filesFailed'] != 0 or results['dirsFailed'] != 0):
+            raise Exception("Failed sync test with two skipped files")
+    else:
+        # Since timestamps can't be trusted only check for explicit failures
+        if (results['filesFailed'] != 0 or results['dirsFailed'] != 0):
+            raise Exception("Failed sync test with two skipped files")
+
 
     # clean up temp
     logger.info("Deleting temp files...")
