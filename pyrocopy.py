@@ -25,7 +25,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
 
-import argparse
 import logging
 import os
 import re
@@ -943,6 +942,7 @@ def _getTreeDepth(path):
     return maxDepth
 
 if __name__ == '__main__':
+    import argparse
     parser = argparse.ArgumentParser(description='A robust file copying utility for Python.')
 
     copymode_group = parser.add_argument_group('copy mode')
