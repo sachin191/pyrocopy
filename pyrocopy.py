@@ -4,6 +4,7 @@ Robust file utilities for Python inspired by Windows' robocopy.
 Copyright (C) 2016 Jean-Philippe Steinmetz
 '''
 
+import argparse
 import logging
 import os
 import re
@@ -903,3 +904,41 @@ def _getTreeDepth(path):
         if (depth > maxDepth):
             maxDepth = depth
     return maxDepth
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(usage="pyrocopy [OPTIONS] <source> <destination>", description='A robust file copying utility for Python.')
+    parser.add_argument("source", type=str, help="The path to copy contents from")
+    parser.add_argument("destination", type=str, help="The path to copy contents to")
+    parser.add_argument_group('OPTIONS')
+    parser.add_argument_group('copy options')
+    parser.add_argument("--mir", action='store_true', required=False, help="Creates an exact copy of source to the destination removing any files or directories in destination not also contained in source.")
+    parser.add_argument("--sync", action='store_true', required=False, help="Performs a bi-directional copy of the contents of source and destination to contain the exact same set of files and directories in both locations.")
+    parser.add_argument("--force", action='store_true', required=False, help="Overwrites all files in destination from source even if newer.")
+    parser.add_argument_group('selection options')
+    parser.add_argument("--if", nargs='+', type=str, required=False, help="A list of regular expressions for file inclusions")
+    parser.add_argument("--id", nargs='+', type=str, required=False, help="A list of regular expressions for directory inclusions")
+    parser.add_argument("--xf", nargs='+', type=str, required=False, help="A list of regular expressions for file exclusions")
+    parser.add_argument("--xd", nargs='+', type=str, required=False, help="A list of regular expressions for directory exclusions")
+    parser.add_argument("--level", type=int, required=False, help="The maximum depth to traverse during the copy.")
+    parser.add_argument("--silent", action='store_true', help="Shows little to no output during the operation.")
+
+    args = parser.parse_args()
+
+    # Set up logger
+    logger.addHandler(logging.StreamHandler())
+    if (args.silent):
+        logger.setLevel(logging.ERROR)
+    else:
+        logger.setLevel(logging.INFO)
+
+    # Perform the desired operation
+    results = None
+    if (args.mir):
+        results = mirror(args.source, args.destination, level=args.level, forceOverwrite=args.force)
+    elif (args.sync):
+        results = sync(args.source, args.destination, level=args.level, forceOverwrite=args.force)
+    else:
+        results = copy(args.source, args.destination, level=args.level, forceOverwrite=args.force)
+
+    if (not args.silent):
+        _displayCopyResults(results)
