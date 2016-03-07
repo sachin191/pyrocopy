@@ -2,6 +2,8 @@
 '''
 Robust file utilities for Python inspired by Windows' robocopy.
 
+Homepage: https://github.com/caskater4/pyrocopy
+
 Copyright (C) 2016 Jean-Philippe Steinmetz
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
