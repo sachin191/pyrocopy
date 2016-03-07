@@ -10,6 +10,7 @@ import re
 import shutil
 import sys
 import tempfile
+import time
 
 # Set up the logger
 logger = logging.getLogger()
@@ -119,6 +120,12 @@ tmpdir = tempfile.mkdtemp()
 # Constants
 MAX_FILE_SIZE = 16 * 1024
 
+# Python prior to version 3.3 has an issue truncating nanosecond based timestamps when calling os.utime. This renders
+# preserveStats tests invalid. On such systems, nullify the test so it doesn't fail.
+PRESERVE_TIMESTAMPS = True
+if (sys.version_info < (3, 3)):
+    PRESERVE_TIMESTAMPS = False
+
 try:
     # mkdir test
     logger.info("Testing pyrocopy.mkdir() ...")
@@ -144,12 +151,10 @@ try:
     logger.info("Testing pyrocopy.copy() ...")
     numFiles = 30
     src = genRandomTree(tmpdir, 4, numFiles, MAX_FILE_SIZE)
-    #src = genRandomTree("C:\\", 4, numFiles, MAX_FILE_SIZE)
     dst = os.path.join(tmpdir, os.path.basename(src) + "Copy")
-    #dst = os.path.join("C:\\", os.path.basename(src) + "Copy")
 
     # check initial copy
-    results = pyrocopy.copy(src, dst)
+    results = pyrocopy.copy(src, dst, preserveStats=PRESERVE_TIMESTAMPS)
     if (results['filesCopied'] != numFiles):
         raise Exception("Failed to copy all files.")
     if (results['filesFailed'] > 0 or results['dirsFailed'] > 0):
@@ -157,7 +162,7 @@ try:
     # TODO Diff src and dst
 
     # check second copy (should skip all files)
-    results = pyrocopy.copy(src, dst)
+    results = pyrocopy.copy(src, dst, preserveStats=PRESERVE_TIMESTAMPS)
     if (results['filesSkipped'] != numFiles):
         raise Exception("Failed to skip all files.")
     if (results['filesFailed'] > 0 or results['dirsFailed'] > 0):
@@ -165,7 +170,7 @@ try:
     # TODO Diff src and dst
 
     # check overwrite copy
-    results = pyrocopy.copy(src, dst, forceOverwrite=True)
+    results = pyrocopy.copy(src, dst, forceOverwrite=True, preserveStats=PRESERVE_TIMESTAMPS)
     if (results['filesCopied'] != numFiles):
         raise Exception("Failed to overwrite all files.")
     if (results['filesFailed'] > 0 or results['dirsFailed'] > 0):

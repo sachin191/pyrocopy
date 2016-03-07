@@ -659,7 +659,7 @@ Copies a file from the give source path to the destination.
 def _copyFile(src, dst, includes=None, excludes=None, showProgress=True, forceOverwrite=False, preserveStats=True):
     # Only copy files
     if (not os.path.isfile(src)):
-        return 0
+        return -1
 
     # Don't copy files to the same location
     if (_isSamePath(src, dst)):
