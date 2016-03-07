@@ -7,6 +7,7 @@ Copyright (C) 2016 Jean-Philippe Steinmetz
 import logging
 import os
 import re
+import stat
 import sys
 
 '''
@@ -709,7 +710,7 @@ def _copyFile(src, dst, includes=None, excludes=None, showProgress=True, forceOv
     return -1
 
 '''
-Copies the stat info from src to dst.
+Copies the stat info (mode bits, atime, mtime, flags) from src to dst.
 
 :type src:string
 :param src: The source path to copy stat info from.
@@ -718,7 +719,21 @@ Copies the stat info from src to dst.
 :param dst: The destination path to copy stat info to.
 '''
 def _copyStats(src, dst):
-    return
+    st = os.stat(src)
+    mode = stat.S_IMODE(st.st_mode)
+    if hasattr(os, 'utime'):
+        os.utime(dst, (st.st_atime, st.st_mtime))
+    if hasattr(os, 'chmod'):
+        os.chmod(dst, mode)
+    if hasattr(os, 'chflags') and hasattr(st, 'st_flags'):
+        try:
+            os.chflags(dst, st.st_flags)
+        except OSError, why:
+            for err in 'EOPNOTSUPP', 'ENOTSUP':
+                if hasattr(errno, err) and why.errno == getattr(errno, err):
+                    break
+            else:
+                raise
 
 '''
 Prints the current progress for the given file operation to any stdout or stderr handler attached to logger using the
