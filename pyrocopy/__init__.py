@@ -3,9 +3,12 @@ import logging
 import pyrocopy
 
 def main():
-    parser = argparse.ArgumentParser(description='A robust file copying utility for Python.')
+    parser = argparse.ArgumentParser(description='A robust file copying utility.')
 
     copymode_group = parser.add_argument_group('copy mode')
+    parser.add_argument("source", type=str, help="The path to copy contents from")
+    parser.add_argument("destination", type=str, help="The path to copy contents to")
+
     mode_group = copymode_group.add_mutually_exclusive_group()
     mode_group.add_argument("--mirror", action='store_true', required=False, help="Creates an exact copy of source to the destination removing any files or directories in destination not also contained in source.")
     mode_group.add_argument("--move", action='store_true', required=False, help="Moves all files and directories from source to destination (delete from source after copying).")
@@ -16,11 +19,11 @@ def main():
     copy_group.add_argument("--nostat", action='store_true', required=False, help="Do not copy file stats (mode bits, atime, mtime, flags)")
     
     select_group = parser.add_argument_group('selection options')
-    select_group.add_argument("-if", "--includefiles", nargs='+', type=str, required=False, help="A list of regular expressions for file inclusions")
-    select_group.add_argument("-id", "--includedirs", nargs='+', type=str, required=False, help="A list of regular expressions for directory inclusions")
-    select_group.add_argument("-xf", "--excludefiles", nargs='+', type=str, required=False, help="A list of regular expressions for file exclusions")
-    select_group.add_argument("-xd", "--excludedirs", nargs='+', type=str, required=False, help="A list of regular expressions for directory exclusions")
-    select_group.add_argument("-l", "--level", type=int, required=False, help="The maximum depth level to traverse during the copy, starting from the source root. A negative value starts from the furthest node from the source root.")
+    select_group.add_argument("-if", "--includefiles", action='append', type=str, required=False, help="A list of regular expressions for file inclusions")
+    select_group.add_argument("-id", "--includedirs", action='append', type=str, required=False, help="A list of regular expressions for directory inclusions")
+    select_group.add_argument("-xf", "--excludefiles", action='append', type=str, required=False, help="A list of regular expressions for file exclusions")
+    select_group.add_argument("-xd", "--excludedirs", action='append', type=str, required=False, help="A list of regular expressions for directory exclusions")
+    select_group.add_argument("-l", "--level", type=int, default=0, required=False, help="The maximum depth level to traverse during the copy, starting from the source root. A negative value starts from the furthest node from the source root.")
     select_group.add_argument("-fl", "--followlinks", action='store_true', required=False, help="Traverses symbolic links as directories instead of copying the link.")
     
     log_group = parser.add_argument_group('logging options')
@@ -29,9 +32,6 @@ def main():
     log_exc_group.add_argument("-v", "--verbose", action='count', default=0, required=False, help="Shows more output during the operation.")
 
     parser.add_argument("--version", action='version', version="pyrocopy " + pyrocopy.__version_str__)
-
-    parser.add_argument("source", type=str, help="The path to copy contents from")
-    parser.add_argument("destination", type=str, help="The path to copy contents to")
 
     args = parser.parse_args()
 

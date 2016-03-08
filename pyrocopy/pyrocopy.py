@@ -34,7 +34,7 @@ import sys
 '''
 The version of this script as an int tuple (major, minor, patch).
 '''
-__version__ = (0, 7, 1)
+__version__ = (0, 7, 2)
 
 '''
 The version of this script as a string. (e.g. '1.0.0')
@@ -557,8 +557,8 @@ def move(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
     results['filesMoved'] = copyResults['filesCopied']
     results['filesFailed'] = copyResults['filesFailed']
     results['filesSkipped'] = copyResults['filesSkipped']
-    results['dirsCopied'] = copyResults['dirsCopied']
-    results['dirsMoved'] = copyResults['dirsFailed']
+    results['dirsMoved'] = copyResults['dirsCopied']
+    results['dirsFailed'] = copyResults['dirsFailed']
     results['dirsSkipped'] = copyResults['dirsSkipped']
     if (detailedResults):
         results['filesMovedList'] = copyResults['filesCopiedList']
@@ -926,17 +926,23 @@ Prints a table showing the results of a copy operation to the INFO log.
 :param results: The dictionary containing the copy results to display.
 '''
 def _displayCopyResults(results):
-    if (logging.getLevelName() > logging.ERROR):
+    if (logger.getEffectiveLevel() > logging.ERROR):
         return
     
     logger.info("--------------------")
     logger.info("Files:")
-    logger.info("\tCopied: %d", results['filesCopied'])
+    if (results.has_key('filesCopied')):
+        logger.info("\tCopied: %d", results['filesCopied'])
+    if (results.has_key('filesMoved')):
+        logger.info("\tMoved: %d", results['filesMoved'])
     logger.info("\tSkipped: %d", results['filesSkipped'])
     logger.info("\tFailed: %d", results['filesFailed'])
     logger.info("")
     logger.info("Directories:")
-    logger.info("\tCopied: %d", results['dirsCopied'])
+    if (results.has_key('dirsCopied')):
+        logger.info("\tCopied: %d", results['dirsCopied'])
+    if (results.has_key('dirsMoved')):
+        logger.info("\tMoved: %d", results['dirsMoved'])
     logger.info("\tSkipped: %d", results['dirsSkipped'])
     logger.info("\tFailed: %d", results['dirsFailed'])
     logger.info("--------------------")
@@ -958,61 +964,3 @@ def _getTreeDepth(path):
         if (depth > maxDepth):
             maxDepth = depth
     return maxDepth
-
-# When executing as a standalone script
-if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser(description='A robust file copying utility for Python.')
-
-    copymode_group = parser.add_argument_group('copy mode')
-    mode_group = copymode_group.add_mutually_exclusive_group()
-    mode_group.add_argument("--mirror", action='store_true', required=False, help="Creates an exact copy of source to the destination removing any files or directories in destination not also contained in source.")
-    mode_group.add_argument("--move", action='store_true', required=False, help="Moves all files and directories from source to destination (delete from source after copying).")
-    mode_group.add_argument("--sync", action='store_true', required=False, help="Performs a bi-directional copy of the contents of source and destination to contain the exact same set of files and directories in both locations.")
-
-    copy_group = parser.add_argument_group('copy options')
-    copy_group.add_argument("-f", "--force", action='store_true', required=False, help="Overwrites all files in destination from source even if newer.")
-    copy_group.add_argument("--nostat", action='store_true', required=False, help="Do not copy file stats (mode bits, atime, mtime, flags)")
-    
-    select_group = parser.add_argument_group('selection options')
-    select_group.add_argument("-if", "--includefiles", nargs='+', type=str, required=False, help="A list of regular expressions for file inclusions")
-    select_group.add_argument("-id", "--includedirs", nargs='+', type=str, required=False, help="A list of regular expressions for directory inclusions")
-    select_group.add_argument("-xf", "--excludefiles", nargs='+', type=str, required=False, help="A list of regular expressions for file exclusions")
-    select_group.add_argument("-xd", "--excludedirs", nargs='+', type=str, required=False, help="A list of regular expressions for directory exclusions")
-    select_group.add_argument("-l", "--level", type=int, required=False, help="The maximum depth level to traverse during the copy, starting from the source root. A negative value starts from the furthest node from the source root.")
-    select_group.add_argument("-fl", "--followlinks", action='store_true', required=False, help="Traverses symbolic links as directories instead of copying the link.")
-    
-    log_group = parser.add_argument_group('logging options')
-    log_exc_group = log_group.add_mutually_exclusive_group()
-    log_exc_group.add_argument("-q", "--quiet", action='count', default=0, required=False, help="Shows less output during the operation.")
-    log_exc_group.add_argument("-v", "--verbose", action='count', default=0, required=False, help="Shows more output during the operation.")
-
-    parser.add_argument("--version", action='version', version="%(prog)s " + __version_str__)
-
-    parser.add_argument("source", type=str, help="The path to copy contents from")
-    parser.add_argument("destination", type=str, help="The path to copy contents to")
-
-    args = parser.parse_args()
-
-    # Set up logger
-    logger.addHandler(logging.StreamHandler())
-
-    # Default log level is INFO. Change the level up/down depending on the option chosen.
-    logger.setLevel(logging.INFO)
-    if (args.quiet > 0):
-        logger.setLevel(logging.INFO + (args.quiet * 10))
-    elif (args.verbose > 0):
-        logger.setLevel(logging.INFO - (args.verbose * 10))
-
-    # Perform the desired operation
-    results = None
-    if (args.mirror):
-        results = pyrocopy.mirror(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=args.excludedirs, level=args.level, followLinks=args.followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
-    elif (args.move):
-        results = pyrocopy.move(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=args.excludedirs, level=args.level, followLinks=args.followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
-    elif (args.sync):
-        results = pyrocopy.sync(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=args.excludedirs, level=args.level, followLinks=args.followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
-    else:
-        results = pyrocopy.copy(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=args.excludedirs, level=args.level, followLinks=args.followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
-
-    _displayCopyResults(results)
