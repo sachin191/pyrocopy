@@ -10,7 +10,7 @@ pyrocopy is a suite of advanced file utility functions for efficiently copying a
 * Detailed operation statistics
 
 ## Installation
-pyrocopy can be easily installed using pip with the following command:
+pyrocopy can be easily installed with **pip** using the following command:
 
 ```
 pip install pyrocopy
@@ -18,10 +18,10 @@ pip install pyrocopy
 ## Using pyrocopy as a module
 
 ### Overview
-There are four primary functions to pyrocopy; copy, mirror, move and sync. Each function takes the same set of arguments and will return a dictionary containing statistics about the operation.
+There are four primary functions to pyrocopy; **copy**, **mirror**, **move** and **sync**. Each function takes the same set of arguments and will return a dictionary containing statistics about the operation.
 
 #### File Selection
-The first key principle of pyrocopy is to provide a robust set of file selection features so that users can operate only on the files and directories they need. Each function offers the ability to specify separate lists of files or directories to include or exclude and uses regular expressions instead to match the names instead of wildcard based matching (e.g. '*.txt') used by most file copy utilities.
+The first key principle of pyrocopy is to provide a robust set of file selection features so that users can operate only on the files and directories they need. Each function offers the ability to specify separate lists of files or directories to include or exclude. Regular expressions are used to match file names and directories instead of wildcard based matching (e.g. '*.txt').
 
 #### Depth Selection
 In addition to filename and directory matching it is possible to define the maximum depth of the source tree that will be traversed. This provides the ability to perform shallow copies or deep copies of an arbitrary length. Furthermore, the tree can be traversed in reverse making it possible to only copy the files and directories contained in the furthest nodes of the tree.
@@ -60,8 +60,8 @@ Statistics [move]
 * dirsSkippedList [requires detailedResults]
 
 ### Examples
-#### Simply Copy
-The following will perform a simply copy of one directory tree to another, skipping any existing files with the same path/name that are newer in the destination than the source.
+#### Simple Copy
+The following will copy one directory tree to another, skipping any existing files with the same path/name that are newer in the destination than the source.
 
 ```python
 from pyrocopy import pyrocopy
@@ -70,7 +70,7 @@ results = pyrocopy.copy(source, destination)
 ```
 
 #### Copy with Inclusions
-The following copies any filename in the source tree that has a name starting with 'myFile' followed by N number. To match the desired form the regular expression 'myFile[0-9]+\..*' is used. '\..*' is required to properly match file extensions.
+The following copies any filename in the source tree that has a name starting with 'myFile' followed by a number. To match the desired form the regular expression 'myFile[0-9]+\\..\*' is used. Note that '\\..\*' is required to properly match file extensions.
 
 ```python
 from pyrocopy import pyrocopy
@@ -88,7 +88,7 @@ results = pyrocopy.mirror(source, destination, excludeDirs=['\.ignore'])
 ```
 
 #### Shallow Copy
-In order to perform a shallow copy with only the files in the source and no subfolders simply add the 'level' argument with a value of 1.
+Adding the 'level' argument with a value of 1 will copy only those files in the immediate source directory, skipping all subdirectories.
 
 ```python
 from pyrocopy import pyrocopy
@@ -96,8 +96,8 @@ from pyrocopy import pyrocopy
 results = pyrocopy.copy(source, destination, level=1)
 ```
 
-### Reverse Shallow Copy
-The reverse shallow copy duplicates the files at the furthest node of the source into the destination, creating all necessary subdirectories along the way.
+### Inverse Shallow Copy
+The inverted shallow copy duplicates the files at the furthest node of the source tree into the destination, creating all necessary subdirectories along the way.
 
 To illustrate this behavior take the following source tree.
 ```
@@ -117,7 +117,7 @@ from pyrocopy import pyrocopy
 results = pyrocopy.copy("/pathA", destination, level=-1)
 ```
 
-The destination tree with look like the following.
+The resulting destination tree looks like the following.
 ```
 /PathB
     /SubPathA1
@@ -125,8 +125,8 @@ The destination tree with look like the following.
             FileSubPathA2.txt
 ```
 
-#### More Reverse Copy
-Expanding on the previous example if we change the specified level from -1 to -2 we get a resulting tree that copies both FileSubPathA2.txt and FileSubPathA1.txt. The code for this is as follows.
+#### More Inverse Copy
+Expanding on the previous example if we change the specified level from -1 to -2 we get a resulting file tree that copies both FileSubPathA2.txt and FileSubPathA1.txt. The code for this is as follows.
 
 ```python
 from pyrocopy import pyrocopy
@@ -134,7 +134,7 @@ from pyrocopy import pyrocopy
 results = pyrocopy.copy("/pathA", destination, level=-2)
 ```
 
-The destination tree with then look like the following.
+With the destination tree looking like the following.
 ```
 /PathB
     /SubPathA1
