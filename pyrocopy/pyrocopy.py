@@ -34,7 +34,7 @@ import sys
 '''
 The version of this script as an int tuple (major, minor, patch).
 '''
-__version__ = (0, 7, 0)
+__version__ = (0, 7, 1)
 
 '''
 The version of this script as a string. (e.g. '1.0.0')
