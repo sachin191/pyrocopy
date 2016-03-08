@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{1c4c480c-cb76-46d6-9500-b7e9ba853b21}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>unittests.py</StartupFile>
+    <StartupFile>tests\unittests.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -22,10 +22,16 @@
     <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="pyrocopy.py" />
-    <Compile Include="unittests.py">
+    <Compile Include="pyrocopy\pyrocopy.py" />
+    <Compile Include="pyrocopy\__init__.py" />
+    <Compile Include="setup.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="tests\unittests.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="pyrocopy\" />
+    <Folder Include="tests\" />
   </ItemGroup>
   <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />

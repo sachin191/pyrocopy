@@ -5,7 +5,7 @@ Copyright (C) 2016 Jean-Philippe Steinmetz
 
 import logging
 import os
-import pyrocopy
+from pyrocopy import pyrocopy
 import random
 import re
 import shutil
@@ -117,6 +117,8 @@ def genRandomTree(path, maxlevels, totalFiles, maxFileSize):
 # Create a temporary place to work
 logger.info("Creating temp directory...")
 tmpdir = tempfile.mkdtemp()
+origdir = os.getcwd()
+os.chdir(tmpdir)
 
 # Constants
 MAX_FILE_SIZE = 16 * 1024
@@ -130,7 +132,7 @@ if (sys.version_info < (3, 3)):
 try:
     # mkdir test
     logger.info("Testing pyrocopy.mkdir() ...")
-    mkdirTestPath = os.path.join(tmpdir, "Level1", "Level2", "Level3", "Level4")
+    mkdirTestPath = os.path.join("Level1", "Level2", "Level3", "Level4")
     if (not os.path.isdir(mkdirTestPath)):
         if (not pyrocopy.mkdir(mkdirTestPath)):
             raise Exception("Failed to create mkdirTestPath!")
@@ -144,7 +146,7 @@ try:
         raise Exception("mkdirTestPath already exists!")
 
     # _getTreeDepth test
-    depth = pyrocopy._getTreeDepth(os.path.join(tmpdir, "Level1"))
+    depth = pyrocopy._getTreeDepth("Level1")
     if (depth != 3):
         raise Exception("Failed to get maximum depth of tree: Level1")
 
@@ -570,6 +572,7 @@ try:
 
 
     # clean up temp
+    os.chdir(origdir)    
     logger.info("Deleting temp files...")
     shutil.rmtree(tmpdir)
 
@@ -580,6 +583,7 @@ except Exception as err:
     (_, _, traceback) = sys.exc_info()
     
     # clean up temp
+    os.chdir(origdir)
     logger.info("Deleting temp files...")
     shutil.rmtree(tmpdir)
 

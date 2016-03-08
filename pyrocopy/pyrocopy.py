@@ -34,7 +34,7 @@ import sys
 '''
 The version of this script as an int tuple (major, minor, patch).
 '''
-__version__ = (0, 6, 1)
+__version__ = (0, 7, 0)
 
 '''
 The version of this script as a string. (e.g. '1.0.0')
@@ -941,6 +941,7 @@ def _getTreeDepth(path):
             maxDepth = depth
     return maxDepth
 
+# When executing as a standalone script
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='A robust file copying utility for Python.')
@@ -988,12 +989,12 @@ if __name__ == '__main__':
     # Perform the desired operation
     results = None
     if (args.mirror):
-        results = mirror(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=excludedirs, level=args.depth, followLinks=followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
+        results = pyrocopy.mirror(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=args.excludedirs, level=args.level, followLinks=args.followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
     elif (args.move):
-        results = move(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=excludedirs, level=args.depth, followLinks=followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
+        results = pyrocopy.move(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=args.excludedirs, level=args.level, followLinks=args.followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
     elif (args.sync):
-        results = sync(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=excludedirs, level=args.depth, followLinks=followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
+        results = pyrocopy.sync(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=args.excludedirs, level=args.level, followLinks=args.followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
     else:
-        results = copy(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=excludedirs, level=args.depth, followLinks=followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
+        results = pyrocopy.copy(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=args.excludedirs, level=args.level, followLinks=args.followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
 
     _displayCopyResults(results)

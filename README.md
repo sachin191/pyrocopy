@@ -9,11 +9,13 @@ pyrocopy is a suite of advanced file utility functions for efficiently copying a
 * Configurable maximum tree depth traversal
 * Detailed operation statistics
 
-## Using pyrocopy as a module
-### Installation
-pyrocopy exists as a single Python script and can be easily installed by downloading the pyrocopy.py file and placing it in the same directory as your existing script or application.
+## Installation
+pyrocopy can be easily installed using pip with the following command:
 
-Latest: https://raw.githubusercontent.com/caskater4/pyrocopy/master/pyrocopy.py
+```
+pip -m install pyrocopy
+```
+## Using pyrocopy as a module
 
 ### Overview
 There are four primary functions to pyrocopy; copy, mirror, move and sync. Each function takes the same set of arguments and will return a dictionary containing statistics about the operation.
@@ -62,7 +64,7 @@ Statistics [move]
 The following will perform a simply copy of one directory tree to another, skipping any existing files with the same path/name that are newer in the destination than the source.
 
 ```python
-import pyrocopy
+from pyrocopy import pyrocopy
 
 results = pyrocopy.copy(source, destination)
 ```
@@ -71,7 +73,7 @@ results = pyrocopy.copy(source, destination)
 The following copies any filename in the source tree that has a name starting with 'myFile' followed by N number. To match the desired form the regular expression 'myFile[0-9]+\..*' is used. '\..*' is required to properly match file extensions.
 
 ```python
-import pyrocopy
+from pyrocopy import pyrocopy
 
 results = pyrocopy.copy(source, destination, includeFiles=['myFile[0-9]+\..*'])
 ```
@@ -80,7 +82,7 @@ results = pyrocopy.copy(source, destination, includeFiles=['myFile[0-9]+\..*'])
 The following mirrors the source tree to the destination but excludes any directory with the name '.ignore'.
 
 ```python
-import pyrocopy
+from pyrocopy import pyrocopy
 
 results = pyrocopy.mirror(source, destination, excludeDirs=['\.ignore'])
 ```
@@ -89,7 +91,7 @@ results = pyrocopy.mirror(source, destination, excludeDirs=['\.ignore'])
 In order to perform a shallow copy with only the files in the source and no subfolders simply add the 'level' argument with a value of 1.
 
 ```python
-import pyrocopy
+from pyrocopy import pyrocopy
 
 results = pyrocopy.copy(source, destination, level=1)
 ```
@@ -110,7 +112,7 @@ To illustrate this behavior take the following source tree.
 Using the following code will copy only FileSubPathA2.txt to the destination by adding the 'level' argument with a value of -1.
 
 ```python
-import pyrocopy
+from pyrocopy import pyrocopy
 
 results = pyrocopy.copy("/pathA", destination, level=-1)
 ```
@@ -127,7 +129,7 @@ The destination tree with look like the following.
 Expanding on the previous example if we change the specified level from -1 to -2 we get a resulting tree that copies both FileSubPathA2.txt and FileSubPathA1.txt. The code for this is as follows.
 
 ```python
-import pyrocopy
+from pyrocopy import pyrocopy
 
 results = pyrocopy.copy("/pathA", destination, level=-2)
 ```
