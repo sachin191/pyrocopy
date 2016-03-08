@@ -132,6 +132,19 @@ if (sys.version_info < (3, 3)):
 try:
     # mkdir test
     logger.info("Testing pyrocopy.mkdir() ...")
+    mkdirTestPath = "New Folder"
+    if (not os.path.isdir(mkdirTestPath)):
+        if (not pyrocopy.mkdir(mkdirTestPath)):
+            raise Exception("Failed to create mkdirTestPath!")
+
+        if (os.path.isdir(mkdirTestPath)):
+            if (not pyrocopy.mkdir(mkdirTestPath)):
+                raise Exception("Unexpected result: mkdirTestPath exists!")
+        else:
+            raise Exception("Failed to create mkdirTestPath!")
+    else:
+        raise Exception("mkdirTestPath already exists!")
+
     mkdirTestPath = os.path.join("Level1", "Level2", "Level3", "Level4")
     if (not os.path.isdir(mkdirTestPath)):
         if (not pyrocopy.mkdir(mkdirTestPath)):
@@ -153,8 +166,8 @@ try:
     # copy test
     logger.info("Testing pyrocopy.copy() ...")
     numFiles = 30
-    src = genRandomTree(tmpdir, 4, numFiles, MAX_FILE_SIZE)
-    dst = os.path.join(tmpdir, os.path.basename(src) + "Copy")
+    src = os.path.relpath(genRandomTree(tmpdir, 4, numFiles, MAX_FILE_SIZE), tmpdir)
+    dst = os.path.basename(src) + "Copy"
 
     # check initial copy
     results = pyrocopy.copy(src, dst, preserveStats=PRESERVE_TIMESTAMPS)

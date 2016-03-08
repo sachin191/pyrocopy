@@ -100,6 +100,10 @@ Copies all files and folders from the given source directory to the destination.
 '''
 def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, excludeDirs=None, level=0,
          followLinks=False, forceOverwrite=False, preserveStats=True, detailedResults=False):
+    # Always work with absolute paths
+    src = os.path.abspath(src)
+    dst = os.path.abspath(dst)
+
     # Stats
     results = {}
     results['filesCopied'] = 0
@@ -209,7 +213,9 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
                     continue
 
                 # Make sure the root directory exists at the destination
-                dstRoot = os.path.join(dst, relRoot)
+                dstRoot = dst
+                if (relRoot != '.'):
+                    dstRoot = os.path.join(dst, relRoot)
                 if (not os.path.isdir(dstRoot)):
                     mkdir(dstRoot)
 
@@ -274,11 +280,11 @@ def mkdir(path):
 
     # Determine if the parent directory exists, if not attempt to create it
     pair = os.path.split(path)
-    if (not os.path.isdir(pair[0])):
+    if (pair[0] != '' and not os.path.isdir(pair[0])):
         mkdir(pair[0])
 
     # Now does the parent directory exist?
-    if (not os.path.isdir(pair[0])):
+    if (pair[0] != '' and not os.path.isdir(pair[0])):
         return False
 
     # Attempt to create the directory
@@ -341,6 +347,10 @@ destination and removes any file or directory present in the destination that is
 '''
 def mirror(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, excludeDirs=None, level=0,
          followLinks=False, forceOverwrite=False, preserveStats=True, detailedResults=False):
+    # Always work with absolute paths
+    src = os.path.abspath(src)
+    dst = os.path.abspath(dst)
+
     # Attempt to copy everything
     results = copy(src, dst, includeFiles=includeFiles, includeDirs=includeDirs, excludeFiles=excludeFiles,
                        excludeDirs=excludeDirs, level=level, followLinks=followLinks, forceOverwrite=forceOverwrite,
@@ -488,6 +498,10 @@ Moves all files and folders from the given source directory to the destination.
 '''
 def move(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, excludeDirs=None, level=0,
          followLinks=False, forceOverwrite=False, preserveStats=True, detailedResults=False):
+    # Always work with absolute paths
+    src = os.path.abspath(src)
+    dst = os.path.abspath(dst)
+
     # Attempt to copy everything
     copyResults = copy(src, dst, includeFiles=includeFiles, includeDirs=includeDirs, excludeFiles=excludeFiles,
                        excludeDirs=excludeDirs, level=level, followLinks=followLinks, forceOverwrite=forceOverwrite,
@@ -610,6 +624,10 @@ copy(path2, path1)
 '''
 def sync(path1, path2, includeFiles=None, includeDirs=None, excludeFiles=None, excludeDirs=None, level=0,
          followLinks=False, forceOverwrite=False, preserveStats=True, detailedResults=False):
+    # Always work with absolute paths
+    path1 = os.path.abspath(path1)
+    path2 = os.path.abspath(path2)
+
     results = copy(path1, path2, includeFiles=includeFiles, includeDirs=includeDirs, excludeFiles=excludeDirs,
                    level=level, followLinks=followLinks, forceOverwrite=forceOverwrite, preserveStats=preserveStats,
                    detailedResults=True)
