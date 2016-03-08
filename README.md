@@ -42,6 +42,18 @@ In addition to being used as a Python module, pyrocopy can be used as a standalo
 
 The command line tool also provides detailed information about the running operation, including real-time progress bars. The output of the tool is configurable if you need more or less information using the *-v* and *-q* options respectively.
 
+### Modes
+By default pyrocopy runs in **copy** mode. This mode will copy the selected contents of the specified *source* directory to a *destination*. Files that already exist in the *destination* with the same relative path and name will be skipped unless the *source* version is newer (this can be overridden with the *--force* option).
+
+#### Mirror
+When using the *--mirror* flag, pyrocopy will run in **mirror** mode. This mode copies the selected contents of the specified *source* directory into *destination* and then removes any file or subdirectory of *destination* that cannot also be found in the *source*.
+
+#### Move
+Using the *--move* flag enables **move** mode. This mode will copy all of the selected contents from *source* to the specified *destination* and if successful remove the file or directory from *source*. Note that if there exists an existing file in *destination* that is newer than the version in *source* the file will be skipped and thus not removed from *source*. This behavior can be overridden using the *--force* flag.
+
+#### Sync
+With the *--sync* flag pyrocoy will run in **sync** mode. Sync mode performs a bi-directional copy of selected contents from *source* to *destination* such that both directories will contain all of the same files at the end of the operation. This is equivalent to running pyrocopy twice in copy mode with the second run having swapped *source* and *destination*.
+
 ### File Selection
 The tool can be instructed to limit the selection of files and directories to be copied by specifying a list of regular expressions. There are two types of file selection lists that can be specified; *inclusion* and *exclusion*.
 
@@ -143,7 +155,8 @@ With the destination tree looking like the following.
 ```
 
 ### Reference
-```usage: pyrocopy [-h] [--mirror | --move | --sync] [-f] [--nostat]
+```
+usage: pyrocopy [-h] [--mirror | --move | --sync] [-f] [--nostat]
                 [-if INCLUDEFILES] [-id INCLUDEDIRS] [-xf EXCLUDEFILES]
                 [-xd EXCLUDEDIRS] [-l LEVEL] [-fl] [-q | -v] [--version]
                 source destination
