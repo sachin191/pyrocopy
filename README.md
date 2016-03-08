@@ -10,18 +10,19 @@ pyrocopy is a suite of advanced file utility functions for efficiently copying a
 * Detailed operation statistics
 
 ## Contents
-* [Installation](#Installation)
-* [Using pyrocopy command line tool](#Using-pyrocopy-command-line-tool)
-    * File Selection
-    * Depth Selection
-    * Examples
-    * Reference
-* [Using pyrocopy as a module](#Using-pyrocopy-as-a-module)
-    * [File Selection](#File-Selection)
-    * [Depth Selection](#Depth-Selection)
-    * [Function Results](#Function-Results)
-    * [Examples](#Examples)
-    * [Reference](#Reference)
+* [Installation](#installation)
+* [Using pyrocopy command line tool](#using-pyrocopy-command-line-tool)
+    * [Modes](#modes)
+    * [File Selection](#file-selection)
+    * [Depth Selection](#depth-selection)
+    * [Examples](#examples)
+    * [Reference](#reference)
+* [Using pyrocopy as a module](#using-pyrocopy-as-a-module)
+    * [File Selection](#file-selection-1)
+    * [Depth Selection](#depth-selection-1)
+    * [Function Results](#function-results)
+    * [Examples](#examples-1)
+    * [Reference](#reference-1)
 
 ## Installation
 pyrocopy can be easily installed with **pip** using the following command:
