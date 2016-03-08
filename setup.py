@@ -25,7 +25,6 @@ setup(
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
         'Intended Audience :: End Users/Desktop',
-        'Topic :: Software Development :: Developers',
         'Topic :: Software Development :: Libraries',
         'Topic :: System :: Systems Administration',
         'Topic :: Utilities',
@@ -36,10 +35,6 @@ setup(
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
     ],
 
     keywords='file utilities admin filesystem copy move mirror sync',
