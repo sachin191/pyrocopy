@@ -13,7 +13,7 @@ pyrocopy is a suite of advanced file utility functions for efficiently copying a
 pyrocopy can be easily installed using pip with the following command:
 
 ```
-pip -m install pyrocopy
+pip install pyrocopy
 ```
 ## Using pyrocopy as a module
 
