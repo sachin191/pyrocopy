@@ -1,16 +1,25 @@
+import pypandoc
 from pyrocopy import pyrocopy
 from setuptools import setup, find_packages
+
+try:
+    import pypandoc
+    long_description = pypandoc.convert('README.md', 'rst')
+except(IOError, ImportError):
+    long_description = open('README.md').read()
 
 setup(
     name='pyrocopy',
 
     version=pyrocopy.__version_str__,
 
-    description='Robust file copying utilties for Python.',
+    description='A suite of robust file copying utilities for Python.',
+	long_description=long_description,
 
     url='https://github.com/caskater4/pyrocopy',
 
     author='Jean-Philippe Steinmetz',
+	author_email='caskater47@gmail.com',
 
     license='MIT',
 
