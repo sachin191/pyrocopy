@@ -1,12 +1,5 @@
-import pypandoc
 from pyrocopy import pyrocopy
 from setuptools import setup, find_packages
-
-try:
-    import pypandoc
-    long_description = pypandoc.convert('README.md', 'rst')
-except(IOError, ImportError):
-    long_description = open('README.md').read()
 
 setup(
     name='pyrocopy',
@@ -14,7 +7,17 @@ setup(
     version=pyrocopy.__version_str__,
 
     description='A suite of robust file copying utilities for Python.',
-	long_description=long_description,
+	long_description="""pyrocopy is a suite of advanced file utility functions for efficiently copying all or part of a directory tree. It can be used as a module in your own application or run as a standalone command line tool.
+
+Main Features
+-------------
+-  Mirror Mode
+-  Sync Mode (bi-directional copy)
+-  Regular expression based filename and directory matching
+-  Configurable maximum tree depth traversal
+-  Detailed operation statistics
+
+For complete documentation please visit the project page on `GitHub <https://github.com/caskater4/pyrocopy>`_.""",
 
     url='https://github.com/caskater4/pyrocopy',
 
