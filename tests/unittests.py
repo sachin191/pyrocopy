@@ -130,6 +130,86 @@ if (sys.version_info < (3, 3)):
     PRESERVE_TIMESTAMPS = False
 
 try:
+    # _normalizeDirPattern tests
+    if (pyrocopy._normalizeDirPattern('*', 'Level1') != '*'):
+        raise Exception("Failed _normalizeDirPattern('*', 'Level1') test")
+    if (pyrocopy._normalizeDirPattern(os.path.join('*', 'Level2'), 'Level1') != os.path.join('*', 'Level2')):
+        raise Exception("Failed _normalizeDirPattern('*/Level2', 'Level1') test")
+    if (pyrocopy._normalizeDirPattern('Level1', os.path.join('Level1','Level2','Leve3')) != os.path.join('Level1', '*', '*')):
+        raise Exception("Failed _normalizeDirPattern('Level1', 'Level1') test")
+
+    # _normalizeFilePattern tests
+    if (pyrocopy._normalizeFilePattern('*.txt', 'myFile.txt') != '*.txt'):
+        raise Exception("Failed _normalizeFilePattern('*.txt', 'myFile.txt') test")
+    if (pyrocopy._normalizeFilePattern('*.txt', os.path.join('Level1','myFile.txt')) != os.path.join('*','*.txt')):
+        raise Exception("Failed _normalizeFilePattern('*.txt', 'Level1/myFile.txt') test")
+    if (pyrocopy._normalizeFilePattern(os.path.join('*','*.txt'), 'myFile.txt') != os.path.join('*','*.txt')):
+        raise Exception("Failed _normalizeFilePattern('*/*.txt', 'myFile.txt') test")
+    if (pyrocopy._normalizeFilePattern(os.path.join('Level1', '*.txt'), os.path.join('Level1','Level2','MyFile.txt')) != os.path.join('Level1','*','*.txt')):
+        raise Exception("Failed _normalizeFilePattern('*/*.txt', 'Level1/Level2/MyFile.txt') test")
+
+    # _checkShouldCopy directory tests
+    if (not pyrocopy._checkShouldCopy("Level1", False, ['Level1'], None)):
+        raise Exception("Failed _checkShouldCopy")
+    if (not pyrocopy._checkShouldCopy("Level1", False, ['re:Level1'], None)):
+        raise Exception("Failed _checkShouldCopy")
+    if (pyrocopy._checkShouldCopy("Level1", False, None, ['Level1'])):
+        raise Exception("Failed _checkShouldCopy")
+    if (pyrocopy._checkShouldCopy("Level1", False, None, ['re:Level1'])):
+        raise Exception("Failed _checkShouldCopy")
+    if (not pyrocopy._checkShouldCopy(os.path.join("Level1", "Level2"), False, [os.path.join('*', 'Level2')], None)):
+        raise Exception("Failed _checkShouldCopy")
+    if (not pyrocopy._checkShouldCopy(os.path.join("Level1", "Level2"), False, ['re:' + os.path.join('.*', 'Level2')], None)):
+        raise Exception("Failed _checkShouldCopy")
+    if (pyrocopy._checkShouldCopy(os.path.join("Level1", "Level2", "Level3"), False, ['Level2'], None)):
+        raise Exception("Failed _checkShouldCopy")
+    if (pyrocopy._checkShouldCopy(os.path.join("Level1", "Level2", "Level3"), False, ['re:Level2'], None)):
+        raise Exception("Failed _checkShouldCopy")
+    if (not pyrocopy._checkShouldCopy(os.path.join("Level1", "Level2", "Level3"), False, [os.path.join('*','Level2')], None)):
+        raise Exception("Failed _checkShouldCopy")
+    if (not pyrocopy._checkShouldCopy(os.path.join("Level1", "Level2", "Level3"), False, ['re:' + os.path.join('.*','Level2')], None)):
+        raise Exception("Failed _checkShouldCopy")
+    if (not pyrocopy._checkShouldCopy(os.path.join("Level1", "Level2", "Level3"), False, None, None)):
+        raise Exception("Failed _checkShouldCopy")
+    if (not pyrocopy._checkShouldCopy(os.path.join("Level1", "Level2", "Level3"), False, ['Level*'], None)):
+        raise Exception("Failed _checkShouldCopy")
+    if (not pyrocopy._checkShouldCopy(os.path.join("Level1", "Level2", "Level3"), False, ['re:Level.*'], None)):
+        raise Exception("Failed _checkShouldCopy")
+    if (pyrocopy._checkShouldCopy(os.path.join("Level1", "Level2", "Level3"), False, None, ['Level*'])):
+        raise Exception("Failed _checkShouldCopy")
+    if (pyrocopy._checkShouldCopy(os.path.join("Level1", "Level2", "Level3"), False, None, ['re:Level.*'])):
+        raise Exception("Failed _checkShouldCopy")
+    if (not pyrocopy._checkShouldCopy(os.path.join("Level1", "Level2", "Level3"), False, ['re:Level[0-9]+'], None)):
+        raise Exception("Failed _checkShouldCopy")
+
+    # _checkShouldCopy file tests
+    if (not pyrocopy._checkShouldCopy("myFile.txt", True, None, None)):
+        raise Exception("Failed _checkShouldCopy")
+    if (not pyrocopy._checkShouldCopy("myFile.txt", True, ['*.txt'], None)):
+        raise Exception("Failed _checkShouldCopy")
+    if (pyrocopy._checkShouldCopy("myFile.log", True, ['*.txt'], None)):
+        raise Exception("Failed _checkShouldCopy")
+    if (pyrocopy._checkShouldCopy("myFile.txt2", True, ['*.txt'], None)):
+        raise Exception("Failed _checkShouldCopy")
+    if (pyrocopy._checkShouldCopy("myFile.txt", True, None, ['*.txt'])):
+        raise Exception("Failed _checkShouldCopy")
+    if (not pyrocopy._checkShouldCopy("myFile.txt", True, None, ['*.txt2'])):
+        raise Exception("Failed _checkShouldCopy")
+    if (not pyrocopy._checkShouldCopy("myFile.log", True, None, ['*.txt'])):
+        raise Exception("Failed _checkShouldCopy")
+    if (not pyrocopy._checkShouldCopy(os.path.join("Level1", "myFile.txt"), True, ['*.txt'], None)):
+        raise Exception("Failed _checkShouldCopy")
+    if (not pyrocopy._checkShouldCopy(os.path.join("Level1", "SubPath1", "SubPath2", "myFile.txt"), True, ['*.txt'], None)):
+        raise Exception("Failed _checkShouldCopy")
+    if (pyrocopy._checkShouldCopy(os.path.join("Level1", "SubPath1", "SubPath2", "myFile.txt"), True, None, ['*.txt'])):
+        raise Exception("Failed _checkShouldCopy")
+    if (not pyrocopy._checkShouldCopy(os.path.join("Level1", "SubPath1", "SubPath2", "myFile.txt"), True, None, [os.path.join('pathA', '*.txt')])):
+        raise Exception("Failed _checkShouldCopy")
+#    if (not pyrocopy._checkShouldCopy("myFile.txt", True, ['re:.*\.txt'], None)):
+#        raise Exception("Failed _checkShouldCopy")
+    if (not pyrocopy._checkShouldCopy(os.path.join("Level1", "SubPath1", "SubPath2", "f2342080"), True, ['re:f[0-9]+'], None)):
+        raise Exception("Failed _checkShouldCopy")
+
     # mkdir test
     logger.info("Testing pyrocopy.mkdir() ...")
     mkdirTestPath = "New Folder"
@@ -158,11 +238,17 @@ try:
     else:
         raise Exception("mkdirTestPath already exists!")
 
+    # _isSamePath test
+    if (pyrocopy._isSamePath("New Folder", "Level1")):
+        raise Exception("Failed _isSamePath test with different folders")
+    if (not pyrocopy._isSamePath("Level1", "Level1")):
+        raise Exception("Failed _isSamePath test with same folder")
+
     # _getTreeDepth test
     depth = pyrocopy._getTreeDepth("Level1")
     if (depth != 3):
         raise Exception("Failed to get maximum depth of tree: Level1")
-
+    
     # copy test
     logger.info("Testing pyrocopy.copy() ...")
     numFiles = 30
@@ -226,14 +312,14 @@ try:
     os.mkdir(os.path.join(src, "dummydir"))
     genRandomContents(os.path.join(src, "dummydir", "dummy1"), MAX_FILE_SIZE)
     genRandomContents(os.path.join(src, "dummydir", "dummy2"), MAX_FILE_SIZE)
-    os.mkdir(os.path.join(lvl1, "moredir"))
+    os.mkdir(os.path.join(src, "dummydir", "moredir"))
     i = 0
     while (i < 5):
-        genRandomContents(os.path.join(lvl1, "moredir", "more"+str(i)), MAX_FILE_SIZE)
+        genRandomContents(os.path.join(src, "dummydir", "moredir", "more"+str(i)), MAX_FILE_SIZE)
         i += 1
 
     # check file includes copy
-    includeFiles = ['f[0-9]+']
+    includeFiles = ['re:f[0-9]+']
     results = pyrocopy.copy(src, dst, includeFiles=includeFiles)
     if (results['filesCopied'] != 15):
         raise Exception("Failed to copy with includeFiles['f[0-9+']")
@@ -244,7 +330,7 @@ try:
 
     # check file excludes copy
     shutil.rmtree(dst)
-    excludeFiles = ['f[0-9]+']
+    excludeFiles = ['re:f[0-9]+']
     results = pyrocopy.copy(src, dst, excludeFiles=excludeFiles)
     if (results['filesCopied'] != 9):
         raise Exception("Failed to copy with excludeFiles['f[0-9+']")
@@ -255,7 +341,7 @@ try:
 
     # check dir includes copy
     shutil.rmtree(dst)
-    includeDirs = ['d[0-9]+']
+    includeDirs = ['re:d[0-9]+']
     results = pyrocopy.copy(src, dst, includeDirs=includeDirs)
     if (results['filesCopied'] != 17):
         raise Exception("Failed to copy with includeDirs=['d[0-9]+']")
@@ -266,7 +352,7 @@ try:
 
     # check dir excludes copy
     shutil.rmtree(dst)
-    excludeDirs = ['moredir']
+    excludeDirs = [os.path.join('*','moredir')]
     results = pyrocopy.copy(src, dst, excludeDirs=excludeDirs)
     if (results['filesCopied'] != 19):
         raise Exception("Failed to copy with excludeDirs=['moredir']")
@@ -307,29 +393,29 @@ try:
 
     # check move dir includes
     includeDirs = ['dummydir']
-    results = pyrocopy.move(src, dst, includeDirs=includeDirs)
-    if (results['filesMoved'] != 8):
+    results = pyrocopy.move(src, dst, includeDirs=includeDirs, detailedResults=True)
+    if (results['filesMoved'] != 13):
         raise Exception("Failed move with dir includes: 'dummydir'")
-    if (not os.path.exists(dst)):
+    if (not os.path.exists(src)):
         raise Exception("Move with dir includes deleted whole tree!")
 
     # check move dir excludes
-    excludeDirs = ['moredir']
-    results = pyrocopy.move(src, dst, excludeDirs=excludeDirs)
-    if (results['filesMoved'] != 11 or results['dirsSkipped'] != 1):
-        raise Exception("Failed to move with dir excludes: 'moredir'")
+    excludeDirs = [os.path.join('*',os.path.basename(lvl2))]
+    results = pyrocopy.move(src, dst, excludeDirs=excludeDirs, detailedResults=True)
+    if (results['filesMoved'] != 4 or results['dirsSkipped'] != 1):
+        raise Exception("Failed to move with dir excludes: '"+excludeDirs[0]+"'")
     if (not os.path.exists(dst)):
         raise Exception("Move with dir excludes deleted whole tree!")
 
     # Move the rest of the files
     results = pyrocopy.move(src, dst)
-    if (results['filesMoved'] != 5):
+    if (results['filesMoved'] != 7):
         raise Exception("Failed to move remainder of files")
     if (os.path.exists(src)):
         raise Exception("Move did not delete source")
 
     # check move file includes
-    includeFiles = ['f[0-9]+']
+    includeFiles = ['re:f[0-9]+']
     results = pyrocopy.move(dst, src, includeFiles=includeFiles)
     if (results['filesMoved'] != 15 or results['filesSkipped'] != 9):
         raise Exception("Failed to move with file includes: 'f[0-9]+'")
@@ -445,7 +531,7 @@ try:
     # check mirror with file includes
     shutil.rmtree(mirPathB)
     pyrocopy.copy(pathB, mirPathB)
-    includeFiles = ['.*A1.*']
+    includeFiles = ['*A1*']
     results = pyrocopy.mirror(mirPathA, mirPathB, includeFiles=includeFiles, detailedResults=True)
     if (results['filesCopied'] != 3 or results['filesSkipped'] != 2):
         raise Exception("Failed mirror test with file includes: '.*A1.*'")
@@ -467,7 +553,7 @@ try:
     # check mirror with file excludes
     shutil.rmtree(mirPathB)
     pyrocopy.copy(pathB, mirPathB)
-    excludeFiles = ['fileA1.*', 'fileSubA1.*']
+    excludeFiles = ['fileA1*', 'fileSubA1*']
     results = pyrocopy.mirror(mirPathA, mirPathB, excludeFiles=excludeFiles, detailedResults=True)
     if (results['filesCopied'] != 2 or results['filesSkipped'] != 3):
         raise Exception("Failed mirror test with file excludes: 'fileA1.*', 'fileSubA1.*'")
@@ -507,7 +593,7 @@ try:
     # check mirror with dir excludes
     shutil.rmtree(mirPathB)
     pyrocopy.copy(pathB, mirPathB)
-    excludeDirs = ['subSubA1']
+    excludeDirs = [os.path.join('*','subSubA1')]
     results = pyrocopy.mirror(mirPathA, mirPathB, excludeDirs=excludeDirs, detailedResults=True)
     if (results['filesCopied'] != 4 or results['dirsSkipped'] != 1):
         raise Exception("Failed mirror test with dir excludes: 'subSubA1'")

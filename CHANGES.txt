@@ -1,0 +1,7 @@
+v0.8.0
+------
+Features:
+Support for wildcard based include/exclude patterns
+
+Bugs:
+Fixed multiple issues when using multi-level include/exclude patterns

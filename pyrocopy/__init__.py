@@ -19,10 +19,10 @@ def main():
     copy_group.add_argument("--nostat", action='store_true', required=False, help="Do not copy file stats (mode bits, atime, mtime, flags)")
     
     select_group = parser.add_argument_group('selection options')
-    select_group.add_argument("-if", "--includefiles", action='append', type=str, required=False, help="A list of regular expressions for file inclusions")
-    select_group.add_argument("-id", "--includedirs", action='append', type=str, required=False, help="A list of regular expressions for directory inclusions")
-    select_group.add_argument("-xf", "--excludefiles", action='append', type=str, required=False, help="A list of regular expressions for file exclusions")
-    select_group.add_argument("-xd", "--excludedirs", action='append', type=str, required=False, help="A list of regular expressions for directory exclusions")
+    select_group.add_argument("-if", "--includefiles", action='append', type=str, required=False, help="A list of regular expression or wildcard patterns for file inclusions. Regex patterns must include the prefix: re:")
+    select_group.add_argument("-id", "--includedirs", action='append', type=str, required=False, help="A list of regular expression or wildcard patterns for directory inclusions. Regex patterns must include the prefix: re:")
+    select_group.add_argument("-xf", "--excludefiles", action='append', type=str, required=False, help="A list of regular expression or wildcard patterns for file exclusions. Regex patterns must include the prefix: re:")
+    select_group.add_argument("-xd", "--excludedirs", action='append', type=str, required=False, help="A list of regular expression or wildcard patterns for directory exclusions. Regex patterns must include the prefix: re:")
     select_group.add_argument("-l", "--level", type=int, default=0, required=False, help="The maximum depth level to traverse during the copy, starting from the source root. A negative value starts from the furthest node from the source root.")
     select_group.add_argument("-fl", "--followlinks", action='store_true', required=False, help="Traverses symbolic links as directories instead of copying the link.")
     

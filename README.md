@@ -5,7 +5,7 @@
 ## Main Features
 * Mirror Mode
 * Sync Mode (bi-directional copy)
-* Regular expression based filename and directory matching
+* Regular expression and wildcard based filename and directory matching
 * Configurable maximum tree depth traversal
 * Detailed operation statistics
 
@@ -56,27 +56,33 @@ Using the *--move* flag enables **move** mode. This mode will copy all of the se
 With the *--sync* flag pyrocoy will run in **sync** mode. Sync mode performs a bi-directional copy of selected contents from *source* to *destination* such that both directories will contain all of the same files at the end of the operation. This is equivalent to running pyrocopy twice in copy mode with the second run having swapped *source* and *destination*.
 
 ### File Selection
-The tool can be instructed to limit the selection of files and directories to be copied by specifying a list of regular expressions. There are two types of file selection lists that can be specified; *inclusion* and *exclusion*.
+The tool can be instructed to limit the selection of files and directories to be copied by specifying a list of regular expressions or wildcard patterns. There are two types of file selection lists that can be specified; *inclusion* and *exclusion*.
 
-The *--includefiles* (*-if*) option allows you to specify a regex pattern that will only copy files whose name matches the pattern. More than one pattern can be provided by adding an additional *--includefiles* option to the command line.
+When specifying a regular expression prefix the pattern with ```re:```. For example, the desired regular expression pattern ```MyDir[0-9]+``` would be ```re:MyDir[0-9]+```. When ```re:``` is not specified a wildcard pattern is assumed.
+
+The *--includefiles* (*-if*) option allows you to specify a regex or wildcard pattern that will only copy files whose path and name matches the pattern. More than one pattern can be provided by adding an additional *--includefiles* option to the command line.
 
 ```
 > pyrocopy --includefiles "pattern1" --includefiles "pattern2" /my/source/path /my/dest/path
 ```
 
-The *--includedirs* (*-id*) option allows you to specify a regex pattern that will only copy directories whose name matches the pattern. Again, more than one pattern can be provided by adding an additional *--includedirs* option. This option can be used in addition to *--includefiles*.
+It is also possible to specify the desired path structure to match. For example if it is desired to copy only the *.txt* files from any folder containing the subdirectory *toinclude* the wildcard pattern would be ```*/toinclude/*.txt```
+
+The *--includedirs* (*-id*) option allows you to specify a regex or wildcard pattern that will only copy directories whose path matches the pattern. Again, more than one pattern can be provided by adding an additional *--includedirs* option. This option can be used in addition to *--includefiles*.
 
 ```
 > pyrocopy --includedirs "dirToInclude" /my/source/path /my/dest/path
 ```
 
-The *--excludefiles* (*-xf*) option specifies a regex pattern that will skip any file whose name matches the pattern. This option is mutually exclusive to *--includefiles* and will have no effect if specified in addition to that option.
+The *--excludefiles* (*-xf*) option specifies a regex or wildcard pattern that will skip any file whose path and name matches the pattern. This option is mutually exclusive to *--includefiles* and will have no effect if specified in addition to that option.
 
 ```
 > pyrocopy --excludefiles "toExclude" /my/source/path /my/dest/path
 ```
 
-The *--excludedirs* (*-xd*) option specifies a regex pattern that will skip any file whose name matches the pattern. This option is mutually exclusive to *--excludedirs* and will have no effect if specified in addition to that option.
+It is also possible to specify the desired path structure to match. For example if it is desired to exclude all *.txt* files from any folder containing the subdirectory *toexclude* the wildcard pattern would be ```*/toexclude/*.txt```
+
+The *--excludedirs* (*-xd*) option specifies a regex or wildcard pattern that will skip any file whose path matches the pattern. This option is mutually exclusive to *--excludedirs* and will have no effect if specified in addition to that option.
 
 ### Depth Selection
 In addition to filename and directory matching it is possible to define the maximum depth of the source tree that will be traversed. This provides the ability to perform shallow copies or deep copies of an arbitrary length. Furthermore, the tree can be traversed in reverse making it possible to only copy the files and directories contained in the furthest nodes of the tree.
@@ -92,17 +98,23 @@ The following will copy one directory tree to another, skipping any existing fil
 ```
 
 #### Copy with Inclusions
-The following copies any filename in the source tree that has a name starting with 'myFile' followed by a number. To match the desired form the regular expression 'myFile[0-9]+\\..\*' is used. Note that '\\..\*' is required to properly match file extensions.
+The following copies any filename in the source tree that has a name starting with *myFile*.
 
 ```
-> pyrocopy --if "myFile[0-9]+\..*" /my/src/path /my/dest/path
+> pyrocopy --if "myFile*" /my/src/path /my/dest/path
+```
+
+A more powerful variation can be made to match only files that start with *myFile* and follow with a number. To match the desired form the regular expression ```myFile[0-9]+``` is used.
+
+```
+> pyrocopy --if "re:myFile[0-9]+" /my/src/path /my/dest/path
 ```
 
 #### Mirror with Exclusions
-The following mirrors the source tree to the destination but excludes any directory with the name '.ignore'.
+The following mirrors the source tree to the destination but excludes any directory with the name *.ignore*.
 
 ```
-> pyrocopy --mirror --xd "\.ignore" /my/src/path /my/dest/path
+> pyrocopy --mirror --xd ".ignore" /my/src/path /my/dest/path
 ```
 
 #### Shallow Copy
@@ -190,13 +202,21 @@ copy options:
 
 selection options:
   -if INCLUDEFILES, --includefiles INCLUDEFILES
-                        A list of regular expressions for file inclusions
+                        A list of regular expression or wildcard patterns for
+                        file inclusions. Regex patterns must include the
+                        prefix: re:
   -id INCLUDEDIRS, --includedirs INCLUDEDIRS
-                        A list of regular expressions for directory inclusions
+                        A list of regular expression or wildcard patterns for
+                        directory inclusions. Regex patterns must include the
+                        prefix: re:
   -xf EXCLUDEFILES, --excludefiles EXCLUDEFILES
-                        A list of regular expressions for file exclusions
+                        A list of regular expression or wildcard patterns for
+                        file exclusions. Regex patterns must include the
+                        prefix: re:
   -xd EXCLUDEDIRS, --excludedirs EXCLUDEDIRS
-                        A list of regular expressions for directory exclusions
+                        A list of regular expression or wildcard patterns for
+                        directory exclusions. Regex patterns must include the
+                        prefix: re:
   -l LEVEL, --level LEVEL
                         The maximum depth level to traverse during the copy,
                         starting from the source root. A negative value starts
@@ -215,7 +235,9 @@ logging options:
 There are four primary functions to pyrocopy; **copy**, **mirror**, **move** and **sync**. Each function takes the same set of arguments and will return a dictionary containing statistics about the operation.
 
 ### File Selection
-The first key principle of pyrocopy is to provide a robust set of file selection features so that users can operate only on the files and directories they need. Each function offers the ability to specify separate lists of files or directories to include or exclude. Regular expressions are used to match file names and directories instead of wildcard based matching (e.g. '*.txt').
+The first key principle of pyrocopy is to provide a robust set of file selection features so that users can operate only on the files and directories they need. Each function offers the ability to specify separate lists of files or directories to include or exclude. Both regular expressions and wildcard based matching patterns are supported to provide you with the greatest flexibility.
+
+When specifying a regular expression you must prefix the pattern with ```re:```. For example the desired regular expression pattern ```MyDir[0-9]+``` would be ```re:MyDir[0-9]+```. If ```re:``` is not specified a wildcard pattern is assumed.
 
 ### Depth Selection
 In addition to filename and directory matching it is possible to define the maximum depth of the source tree that will be traversed. This provides the ability to perform shallow copies or deep copies of an arbitrary length. Furthermore, the tree can be traversed in reverse making it possible to only copy the files and directories contained in the furthest nodes of the tree.
@@ -264,12 +286,20 @@ results = pyrocopy.copy(source, destination)
 ```
 
 #### Copy with Inclusions
-The following copies any filename in the source tree that has a name starting with 'myFile' followed by a number. To match the desired form the regular expression 'myFile[0-9]+\\..\*' is used. Note that '\\..\*' is required to properly match file extensions.
+The following copies any filename in the source tree that has a name starting with *myFile*.
 
 ```python
 from pyrocopy import pyrocopy
 
-results = pyrocopy.copy(source, destination, includeFiles=['myFile[0-9]+\..*'])
+results = pyrocopy.copy(source, destination, includeFiles=['myFile*'])
+```
+
+A more powerful variation can be made to match only files that start with *myFile* and follow with a number. To match the desired form the regular expression ```myFile[0-9]+``` is used.
+
+```python
+from pyrocopy import pyrocopy
+
+results = pyrocopy.copy(source, destination, includeFiles=['re:myFile[0-9]+'])
 ```
 
 #### Mirror with Exclusions
@@ -278,7 +308,7 @@ The following mirrors the source tree to the destination but excludes any direct
 ```python
 from pyrocopy import pyrocopy
 
-results = pyrocopy.mirror(source, destination, excludeDirs=['\.ignore'])
+results = pyrocopy.mirror(source, destination, excludeDirs=['.ignore'])
 ```
 
 #### Shallow Copy
@@ -350,13 +380,13 @@ The source path to copy from
 ###### dst:string
 The destination path to copy to
 ###### includeFiles:array
-A list of regex patterns of files to include during the operation. Files not matching at least one pattern in the include list will be skipped.
+A list of regex and wildcard patterns of files to include during the operation. Files not matching at least one pattern in the include list will be skipped. Regex patterns must be prefixed with ```re:```
 ###### includeDirs:array
-A list of regex patterns of directory names to include during the operation. Directories not matching at least one pattern in the include list will be skipped.
+A list of regex and wildcard patterns of directory names to include during the operation. Directories not matching at least one pattern in the include list will be skipped. Regex patterns must be prefixed with ```re:```
 ###### excludeFiles:array
-A list of regex patterns of files to exclude during the operation.
+A list of regex and wildcard patterns of files to exclude during the operation. Regex patterns must be prefixed with ```re:```
 ###### excludeDirs:array
-A list of regex patterns of directory names to exclude during the operation.
+A list of regex and wildcard patterns of directory names to exclude during the operation. Regex patterns must be prefixed with ```re:```
 ###### level:int
 The maximum depth to traverse in the source directory tree.
 
@@ -391,13 +421,13 @@ The source path to copy from
 ###### dst:string
 The destination path to copy to
 ###### includeFiles:array
-A list of regex patterns of files to include during the operation. Files not matching at least one pattern in the include list will be skipped.
+A list of regex and wildcard patterns of files to include during the operation. Files not matching at least one pattern in the include list will be skipped. Regex patterns must be prefixed with ```re:```
 ###### includeDirs:array
-A list of regex patterns of directory names to include during the operation. Directories not matching at least one pattern in the include list will be skipped.
+A list of regex and wildcard patterns of directory names to include during the operation. Directories not matching at least one pattern in the include list will be skipped. Regex patterns must be prefixed with ```re:```
 ###### excludeFiles:array
-A list of regex patterns of files to exclude during the operation.
+A list of regex and wildcard patterns of files to exclude during the operation. Regex patterns must be prefixed with ```re:```
 ###### excludeDirs:array
-A list of regex patterns of directory names to exclude during the operation.
+A list of regex and wildcard patterns of directory names to exclude during the operation. Regex patterns must be prefixed with ```re:```
 ###### level:int
 The maximum depth to traverse in the source directory tree.
 
@@ -431,13 +461,13 @@ The source path to move from
 ###### dst:string
 The destination path to move to
 ###### includeFiles:array
-A list of regex patterns of files to include during the operation. Files not matching at least one pattern in the include list will be skipped.
+A list of regex and wildcard patterns of files to include during the operation. Files not matching at least one pattern in the include list will be skipped. Regex patterns must be prefixed with ```re:```
 ###### includeDirs:array
-A list of regex patterns of directory names to include during the operation. Directories not matching at least one pattern in the include list will be skipped.
+A list of regex and wildcard patterns of directory names to include during the operation. Directories not matching at least one pattern in the include list will be skipped. Regex patterns must be prefixed with ```re:```
 ###### excludeFiles:array
-A list of regex patterns of files to exclude during the operation.
+A list of regex and wildcard patterns of files to exclude during the operation. Regex patterns must be prefixed with ```re:```
 ###### excludeDirs:array
-A list of regex patterns of directory names to exclude during the operation.
+A list of regex and wildcard patterns of directory names to exclude during the operation. Regex patterns must be prefixed with ```re:```
 ###### level:int
 The maximum depth to traverse in the source directory tree.
 
@@ -471,13 +501,13 @@ The source path to copy from
 ###### dst:string
 The destination path to copy to
 ###### includeFiles:array
-A list of regex patterns of files to include during the operation. Files not matching at least one pattern in the include list will be skipped.
+A list of regex and wildcard patterns of files to include during the operation. Files not matching at least one pattern in the include list will be skipped. Regex patterns must be prefixed with ```re:```
 ###### includeDirs:array
-A list of regex patterns of directory names to include during the operation. Directories not matching at least one pattern in the include list will be skipped.
+A list of regex and wildcard patterns of directory names to include during the operation. Directories not matching at least one pattern in the include list will be skipped. Regex patterns must be prefixed with ```re:```
 ###### excludeFiles:array
-A list of regex patterns of files to exclude during the operation.
+A list of regex and wildcard patterns of files to exclude during the operation. Regex patterns must be prefixed with ```re:```
 ###### excludeDirs:array
-A list of regex patterns of directory names to exclude during the operation.
+A list of regex and wildcard patterns of directory names to exclude during the operation. Regex patterns must be prefixed with ```re:```
 ###### level:int
 The maximum depth to traverse in the source directory tree.
 

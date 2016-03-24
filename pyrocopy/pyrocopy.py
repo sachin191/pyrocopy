@@ -25,6 +25,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
 
+import fnmatch
 import logging
 import os
 import re
@@ -34,7 +35,7 @@ import sys
 '''
 The version of this script as an int tuple (major, minor, patch).
 '''
-__version__ = (0, 7, 4)
+__version__ = (0, 8, 0)
 
 '''
 The version of this script as a string. (e.g. '1.0.0')
@@ -59,18 +60,22 @@ Copies all files and folders from the given source directory to the destination.
 :param dst: The destination path to copy to
 
 :type includeFiles:array
-:param includeFiles: A list of regex patterns of files to include during the operation.
+:param includeFiles: A list of regex and wildcard patterns of files to include during the operation.
                      Files not matching at least one pattern in the include list will be skipped.
+                     Regex patterns must be prefixed with re:
 
 :type includeDirs:array
-:param includeDirs: A list of regex patterns of directory names to include during the operation.
+:param includeDirs: A list of regex and wildcard patterns of directory names to include during the operation.
                     Directories not matching at least one pattern in the include list will be skipped.
+                    Regex patterns must be prefixed with re:
 
 :type excludeFiles:array
-:param excludeFiles: A list of regex patterns of files to exclude during the operation.
+:param excludeFiles: A list of regex and wildcard patterns of files to exclude during the operation.
+                     Regex patterns must be prefixed with re:
 
 :type excludeDirs:array
-:param excludeDirs: A list of regex patterns of directory names to exclude during the operation.
+:param excludeDirs: A list of regex and wildcard patterns of directory names to exclude during the operation.
+                    Regex patterns must be prefixed with re:
 
 :type level:int
 :param level: The maximum depth to traverse in the source directory tree.
@@ -124,19 +129,31 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
     includeFilePatterns = []
     if (includeFiles != None):
         for pattern in includeFiles:
-            includeFilePatterns.append(re.compile(pattern))
+            if (pattern.startswith("re:")):
+                includeFilePatterns.append(re.compile(pattern[3:]))
+            else:
+                includeFilePatterns.append(pattern)
     includeDirPatterns = []
     if (includeDirs != None):
         for pattern in includeDirs:
-            includeDirPatterns.append(re.compile(pattern))
+            if (pattern.startswith("re:")):
+                includeDirPatterns.append(re.compile(pattern[3:]))
+            else:
+                includeDirPatterns.append(pattern)
     excludeFilePatterns = []
     if (excludeFiles != None):
         for pattern in excludeFiles:
-            excludeFilePatterns.append(re.compile(pattern))
+            if (pattern.startswith("re:")):
+                excludeFilePatterns.append(re.compile(pattern[3:]))
+            else:
+                excludeFilePatterns.append(pattern)
     excludeDirPatterns = []
     if (excludeDirs != None):
         for pattern in excludeDirs:
-            excludeDirPatterns.append(re.compile(pattern))
+            if (pattern.startswith("re:")):
+                excludeDirPatterns.append(re.compile(pattern[3:]))
+            else:
+                excludeDirPatterns.append(pattern)
 
     if (not _isSamePath(src, dst)):
         # Is the source path a file, directory or symlink?
@@ -170,8 +187,9 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
             # Determine the max depth.
             maxDepth = _getTreeDepth(src)
             
-            # Traverse the tree and begin copying
-            for root, dirs, files in os.walk(src, topdown=(level >= 0), followlinks=followLinks):
+            # Traverse the tree and begin copying. Always traverse from the bottom up as this ensures we get the
+            # desired behavior for file/dir inclusion patterns.
+            for root, dirs, files in os.walk(src, topdown=False, followlinks=followLinks):
                 relRoot = os.path.relpath(root, src)
 
                 logger.debug("Processing Directory: %s", relRoot)
@@ -205,7 +223,7 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
 
                 # Should the directory be traversed?
                 if (relRoot != '.' and
-                    not _checkShouldCopy(os.path.basename(relRoot), includeDirPatterns, excludeDirPatterns)):
+                    not _checkShouldCopy(relRoot, False, includeDirPatterns, excludeDirPatterns)):
                     logger.info("Skipped: %s", relRoot)
                     results['dirsSkipped'] += 1
                     if (detailedResults):
@@ -305,18 +323,22 @@ destination and removes any file or directory present in the destination that is
 :param dst: The destination path to copy to
 
 :type includeFiles:array
-:param includeFiles: A list of regex patterns of files to include during the operation.
+:param includeFiles: A list of regex and wildcard patterns of files to include during the operation.
                      Files not matching at least one pattern in the include list will be skipped.
+                     Regex patterns must be prefixed with re:
 
 :type includeDirs:array
-:param includeDirs: A list of regex patterns of directory names to include during the operation.
+:param includeDirs: A list of regex and wildcard patterns of directory names to include during the operation.
                     Directories not matching at least one pattern in the include list will be skipped.
+                    Regex patterns must be prefixed with re:
 
 :type excludeFiles:array
-:param excludeFiles: A list of regex patterns of files to exclude during the operation.
+:param excludeFiles: A list of regex and wildcard patterns of files to exclude during the operation.
+                     Regex patterns must be prefixed with re:
 
 :type excludeDirs:array
-:param excludeDirs: A list of regex patterns of directory names to exclude during the operation.
+:param excludeDirs: A list of regex and wildcard patterns of directory names to exclude during the operation.
+                    Regex patterns must be prefixed with re:
 
 :type level:int
 :param level: The maximum depth to traverse in the source directory tree.
@@ -457,18 +479,22 @@ Moves all files and folders from the given source directory to the destination.
 :param dst: The destination path to move to
 
 :type includeFiles:array
-:param includeFiles: A list of regex patterns of files to include during the operation.
+:param includeFiles: A list of regex and wildcard patterns of files to include during the operation.
                      Files not matching at least one pattern in the include list will be skipped.
+                     Regex patterns must be prefixed with re:
 
 :type includeDirs:array
-:param includeDirs: A list of regex patterns of directory names to include during the operation.
+:param includeDirs: A list of regex and wildcard patterns of directory names to include during the operation.
                     Directories not matching at least one pattern in the include list will be skipped.
+                    Regex patterns must be prefixed with re:
 
 :type excludeFiles:array
-:param excludeFiles: A list of regex patterns of files to exclude during the operation.
+:param excludeFiles: A list of regex and wildcard patterns of files to exclude during the operation.
+                     Regex patterns must be prefixed with re:
 
 :type excludeDirs:array
-:param excludeDirs: A list of regex patterns of directory names to exclude during the operation.
+:param excludeDirs: A list of regex and wildcard patterns of directory names to exclude during the operation.
+                    Regex patterns must be prefixed with re:
 
 :type level:int
 :param level: The maximum depth to traverse in the source directory tree.
@@ -584,18 +610,22 @@ copy(path2, path1)
 :param path2: The second path to synchronize
 
 :type includeFiles:array
-:param includeFiles: A list of regex patterns of files to include during the operation.
+:param includeFiles: A list of regex and wildcard patterns of files to include during the operation.
                      Files not matching at least one pattern in the include list will be skipped.
+                     Regex patterns must be prefixed with re:
 
 :type includeDirs:array
-:param includeDirs: A list of regex patterns of directory names to include during the operation.
+:param includeDirs: A list of regex and wildcard patterns of directory names to include during the operation.
                     Directories not matching at least one pattern in the include list will be skipped.
+                    Regex patterns must be prefixed with re:
 
 :type excludeFiles:array
-:param excludeFiles: A list of regex patterns of files to exclude during the operation.
+:param excludeFiles: A list of regex and wildcard patterns of files to exclude during the operation.
+                     Regex patterns must be prefixed with re:
 
 :type excludeDirs:array
-:param excludeDirs: A list of regex patterns of directory names to exclude during the operation.
+:param excludeDirs: A list of regex and wildcard patterns of directory names to exclude during the operation.
+                    Regex patterns must be prefixed with re:
 
 :type level:int
 :param level: The maximum depth to traverse in the source directory tree.
@@ -729,12 +759,130 @@ def _isSamePath(src, dst):
             os.path.normcase(os.path.abspath(dst)))
 
 '''
-Determines if the given file name will be copied given the list of includes and excludes.
-When include patterns are provided the filename must match at least one of the patterns
+Normalizes the given pattern by adding wildcards when path has more levels.
+
+Note that on Windows regular expression patterns have issues with when using the path separator '\' character.
+This function will switch all path separators in a regex pattern to use '/' instead.
+
+e.g.
+Given a path 'Level1' and pattern '*/Level2' would return '*/Level2'
+Given a path 'Level1/Level2/Level3' and a pattern 'Level1' would return 'Level1/*/*'
+
+:type path:string or regex
+:param path: The pattern to normalize
+
+:type path:string
+:param path: The path to normalize the pattern for
+
+:rtype:string or regex
+:return: A string or regex object of the normalized pattern for the given path
+'''
+def _normalizeDirPattern(pattern, path):
+    bIsRegex = False
+    tmpPattern = pattern
+    if (isinstance(pattern, re._pattern_type)):
+        tmpPattern = pattern.pattern
+        bIsRegex = True
+    elif (pattern.startswith('re:')):
+        tmpPattern = pattern[3:]
+        bIsRegex = True
+
+    numPathSep = path.count(os.path.sep)
+    numPatternSep = tmpPattern.count(os.path.sep)
+    
+    # When the path has more levels, fill in the pattern with wildcards
+    if (numPathSep > numPatternSep):
+        while (numPathSep > numPatternSep):
+            if (bIsRegex):
+                if (tmpPattern != ''):
+                    tmpPattern = tmpPattern + "/.*"
+                else:
+                    tmpPattern = '.*'
+            else:
+                tmpPattern = os.path.join(tmpPattern, "*")
+            numPatternSep = numPatternSep + 1
+
+    if (bIsRegex):
+        return re.compile(tmpPattern)
+    else:
+        return tmpPattern
+
+'''
+Normalizes the given pattern by adding wildcards when path has more levels.
+
+For patterns that are already multi-level wildcards are added to the middle of the path, before the tail, as
+it is assumed the tail of the pattern is for filename matching and not just a path.
+
+Note that on Windows regular expression patterns have issues with when using the path separator '\' character.
+This function will switch all path separators in a regex pattern to use '/' instead.
+
+e.g.
+Given a filepath 'MyFile.txt' and a pattern '*.txt' will return '*.txt'
+Given a filepath 'Level1/MyFile.txt' and a pattern '*.txt' will return '*/*.txt'
+Given a filepath 'MyFile.txt' and a pattern 'Level1/*.txt' will return 'Level1/*.txt'
+Given a filepath 'Level1/Level2/MyFile.txt' and a pattern 'Level1/*.txt' will return 'Level1/*/*.txt'
+
+:type path:string or regex
+:param path: The pattern to normalize
+
+:type path:string
+:param path: The path to normalize the pattern for
+
+:rtype:string or regex
+:return: A string or regex object of the normalized pattern for the given path
+'''
+def _normalizeFilePattern(pattern, filepath):
+    bIsRegex = False
+    tmpPattern = pattern
+    if (isinstance(pattern, re._pattern_type)):
+        tmpPattern = pattern.pattern
+        bIsRegex = True
+    elif (pattern.startswith('re:')):
+        tmpPattern = pattern[3:]
+        bIsRegex = True
+
+    # Separate the file pattern from the dir/path pattern
+    patternParts = os.path.split(tmpPattern)
+    tmpPattern = patternParts[0]
+
+    numPathSep = filepath.count(os.path.sep)
+    numPatternSep = tmpPattern.count(os.path.sep)
+    if (tmpPattern != ''):
+        numPatternSep = numPatternSep + 1
+    
+    # When the path has more levels, fill in the pattern with wildcards
+    if (numPathSep > numPatternSep):
+        while (numPathSep > numPatternSep):
+            if (bIsRegex):
+                if (tmpPattern != ''):
+                    tmpPattern = tmpPattern + "/.*"
+                else:
+                    tmpPattern = '.*'
+            else:
+                tmpPattern = os.path.join(tmpPattern, "*")
+            numPatternSep = numPatternSep + 1
+
+    # Append the file pattern back
+    if (bIsRegex):
+        tmpPattern = tmpPattern + "/" + patternParts[1]
+    else:
+        tmpPattern = os.path.join(tmpPattern, patternParts[1])
+
+    if (bIsRegex):
+        return re.compile(tmpPattern)
+    else:
+        return tmpPattern
+
+'''
+Determines if the given path will be copied given the list of includes and excludes.
+When include patterns are provided the path must match at least one of the patterns
 given and cannot be excluded
 
-:type filename:string
-:param filename: The name of the file to check
+:type path:string
+:param path: The path of the directory to check
+
+:type bIsFile:bool
+:param bIsFile: Set to true if path is for a file
 
 :type includes:array
 :param includes: The list of compiled inclusive regex patterns to check the path against
@@ -742,20 +890,47 @@ given and cannot be excluded
 :type excludes:array
 :param excludes: The list of compiled exclusive regex patterns to check the path against
 '''
-def _checkShouldCopy(filename, includes, excludes):
-    # Check the file against the include list
-    if (len(includes) > 0):
+def _checkShouldCopy(path, bIsFile, includes, excludes):
+    # The pattern will have '/' path separators (even on Windows). Make sure the path does too.
+    rePath = path
+    if (os.path.sep == '\\'):
+        rePath = path.replace(os.path.sep, '/')
+
+    # Now check the path against the include list.
+    if (includes != None and len(includes) > 0):
         isIncluded = False
         for pattern in includes:
-            if (re.match(pattern, filename) != None):
-                isIncluded = True
-                break
+            normPattern = None
+            if (bIsFile):
+                normPattern = _normalizeFilePattern(pattern, path)
+            else:
+                normPattern = _normalizeDirPattern(pattern, path)
+            
+            if (isinstance(normPattern, re._pattern_type)):
+                if (normPattern.match(rePath) != None):
+                    isIncluded = True
+                    break
+            else:
+                if (fnmatch.fnmatch(path, normPattern)):
+                    isIncluded = True
+                    break
         return isIncluded
 
     # Now check the exclude lists
-    for pattern in excludes:
-        if (re.match(pattern, filename) != None):
-            return False
+    if (excludes != None):
+        for pattern in excludes:
+            normPattern = None
+            if (bIsFile):
+                normPattern = _normalizeFilePattern(pattern, path)
+            else:
+                normPattern = _normalizeDirPattern(pattern, path)
+            
+            if (isinstance(normPattern, re._pattern_type)):
+                if (normPattern.match(rePath) != None):
+                    return False
+            else:
+                if (fnmatch.fnmatch(path, normPattern)):
+                    return False
 
     return True
 
@@ -797,7 +972,7 @@ def _copyFile(src, dst, includes=None, excludes=None, showProgress=True, forceOv
         return -1
 
     # Should the file be copied?
-    if (not _checkShouldCopy(os.path.basename(src), includes, excludes)):
+    if (not _checkShouldCopy(src, True, includes, excludes)):
         return 0
 
     # Don't overwrite older copies of files unless explicitly desired
