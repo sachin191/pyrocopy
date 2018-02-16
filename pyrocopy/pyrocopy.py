@@ -1039,7 +1039,7 @@ def _copyStats(src, dst):
     if hasattr(os, 'chflags') and hasattr(st, 'st_flags'):
         try:
             os.chflags(dst, st.st_flags)
-        except OSError, why:
+        except OSError as why:
             for err in 'EOPNOTSUPP', 'ENOTSUP':
                 if hasattr(errno, err) and why.errno == getattr(errno, err):
                     break
@@ -1106,17 +1106,17 @@ def _displayCopyResults(results):
     
     logger.info("--------------------")
     logger.info("Files:")
-    if (results.has_key('filesCopied')):
+    if ('filesCopied' in results):
         logger.info("\tCopied: %d", results['filesCopied'])
-    if (results.has_key('filesMoved')):
+    if ('filesMoved' in results):
         logger.info("\tMoved: %d", results['filesMoved'])
     logger.info("\tSkipped: %d", results['filesSkipped'])
     logger.info("\tFailed: %d", results['filesFailed'])
     logger.info("")
     logger.info("Directories:")
-    if (results.has_key('dirsCopied')):
+    if ('dirsCopied' in results):
         logger.info("\tCopied: %d", results['dirsCopied'])
-    if (results.has_key('dirsMoved')):
+    if ('dirsMoved' in results):
         logger.info("\tMoved: %d", results['dirsMoved'])
     logger.info("\tSkipped: %d", results['dirsSkipped'])
     logger.info("\tFailed: %d", results['dirsFailed'])
