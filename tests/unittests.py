@@ -53,7 +53,7 @@ Creates a new file at the given path with random contents.
 :return: The path to the newly created file.
 '''
 def genRandomFile(path, maxFileSize):
-    filename = "f" + str(random.randint(0, sys.maxint))
+    filename = "f" + str(random.randint(0, sys.maxsize))
     filepath = os.path.join(path, filename)
 
     logger.info("Creating: %s", filepath)
@@ -687,4 +687,4 @@ except Exception as err:
     shutil.rmtree(tmpdir)
 
     # Re-raise with original trace
-    raise err, None, traceback
+    raise
