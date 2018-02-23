@@ -50,7 +50,7 @@ The default log level is INFO.
 logger = logging.getLogger()
 logger.addHandler(logging.NullHandler())
 
-BUFFERSIZE_KIB = 16  # default buffer size in kiB for file-copy operations.
+BUFFERSIZE_KIB = 16  # Buffer size in kiB for file-copy operations.
 
 '''
 Copies all files and folders from the given source directory to the destination.
