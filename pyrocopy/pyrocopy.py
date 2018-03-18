@@ -48,7 +48,7 @@ The logger used to report information and progress during operations.
 
 The default log level is INFO.
 '''
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 BUFFERSIZE_KIB = 16  # Buffer size in kiB for file-copy operations.
