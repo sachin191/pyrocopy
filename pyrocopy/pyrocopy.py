@@ -51,6 +51,8 @@ The default log level is INFO.
 logger = logging.getLogger()
 logger.addHandler(logging.NullHandler())
 
+BUFFERSIZE_KIB = 16  # Buffer size in kiB for file-copy operations.
+
 '''
 Copies all files and folders from the given source directory to the destination.
 
@@ -992,7 +994,8 @@ def _copyFile(src, dst, includes=None, excludes=None, showProgress=True, forceOv
     else:
 
         # The number of bytes per read operation
-        maxReadLength = 16*1024
+        global BUFFERSIZE_KIB
+        maxReadLength = BUFFERSIZE_KIB*1024
         with open(src, 'rb') as fsrc:
             with open(dst, 'wb') as fdst:
                 bytesTotal = os.path.getsize(src)
