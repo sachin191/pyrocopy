@@ -990,24 +990,30 @@ def _copyFile(src, dst, includes=None, excludes=None, showProgress=True, forceOv
     # Finally perform the copy
     logger.info("Copying: %s => %s", src, dst)
     if (os.path.islink(src)):
-        os.symlink(os.readlink(src), dst)
-    else:
+        try:
+            os.symlink(os.readlink(src), dst)
+        except (IOError, OSError):
+            return -1
 
+    else:
         # The number of bytes per read operation
         global BUFFERSIZE_KIB
         maxReadLength = BUFFERSIZE_KIB*1024
-        with open(src, 'rb') as fsrc:
-            with open(dst, 'wb') as fdst:
-                bytesTotal = os.path.getsize(src)
-                bytesWritten = 0
-                while 1:
-                    buf = fsrc.read(maxReadLength)
-                    if not buf:
-                        break
-                    fdst.write(buf)
-                    
-                    bytesWritten += len(buf)
-                    _displayProgress(bytesWritten, bytesTotal)
+        try:
+            with open(src, 'rb') as fsrc:
+                with open(dst, 'wb') as fdst:
+                    bytesTotal = os.path.getsize(src)
+                    bytesWritten = 0
+                    while 1:
+                        buf = fsrc.read(maxReadLength)
+                        if not buf:
+                            break
+                        fdst.write(buf)
+
+                        bytesWritten += len(buf)
+                        _displayProgress(bytesWritten, bytesTotal)
+        except (IOError, OSError):
+            return -1
 
         # Spit out an empty line so subsequent text starts on the next line
         logger.info("")
