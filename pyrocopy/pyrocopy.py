@@ -106,6 +106,8 @@ Copies all files and folders from the given source directory to the destination.
          'filesCopiedList':list, 'filesFailedList':list, 'filesSkippedList':list,
          'dirsCopiedList':list, 'dirsFailedList':list, 'dirsSkippedList':list
 '''
+
+
 def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, excludeDirs=None, level=0,
          followLinks=False, forceOverwrite=False, preserveStats=True, detailedResults=False):
     # Always work with absolute paths
@@ -127,7 +129,7 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
         results['dirsCopiedList'] = []
         results['dirsFailedList'] = []
         results['dirsSkippedList'] = []
-    
+
     # Compile the provided regex patterns
     includeFilePatterns = []
     if (includeFiles != None):
@@ -189,7 +191,7 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
 
             # Determine the max depth.
             maxDepth = _getTreeDepth(src)
-            
+
             # Traverse the tree and begin copying. Always traverse from the bottom up as this ensures we get the
             # desired behavior for file/dir inclusion patterns.
             for root, dirs, files in os.walk(src, topdown=False, followlinks=followLinks):
@@ -226,7 +228,7 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
 
                 # Should the directory be traversed?
                 if (relRoot != '.' and
-                    not _checkShouldCopy(relRoot, False, includeDirPatterns, excludeDirPatterns)):
+                        not _checkShouldCopy(relRoot, False, includeDirPatterns, excludeDirPatterns)):
                     logger.info("Skipped: %s", relRoot)
                     results['dirsSkipped'] += 1
                     if (detailedResults):
@@ -251,7 +253,7 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
                         if (detailedResults):
                             results['dirsFailedList'].append(relRoot)
                         continue
-        
+
                 for file in files:
                     filePath = os.path.join(relRoot, file)
                     srcFullPath = os.path.join(src, root, file)
@@ -285,6 +287,7 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
 
     return results
 
+
 '''
 Creats a new directory at the specified path. This function will create all parent directories that are missing in the
 given path.
@@ -295,6 +298,8 @@ given path.
 :rtype:bool
 :return: Returns True if the directory was successfully created, otherwise False.
 '''
+
+
 def mkdir(path):
     if (os.path.exists(path)):
         return os.path.isdir(path)
@@ -314,6 +319,7 @@ def mkdir(path):
     logger.debug("Created: %s", path)
 
     return os.path.isdir(path)
+
 
 '''
 Creates an exact copy of the given source to the destination. Copies all files and directories from source to the
@@ -370,16 +376,18 @@ destination and removes any file or directory present in the destination that is
          'filesCopiedList':list, 'filesFailedList':list, 'filesRemovedList':list, 'filesSkippedList':list,
          'dirsCopiedList':list, 'dirsFailedList':list, 'dirsRemovedList':list, 'dirsSkippedList':list
 '''
+
+
 def mirror(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, excludeDirs=None, level=0,
-         followLinks=False, forceOverwrite=False, preserveStats=True, detailedResults=False):
+           followLinks=False, forceOverwrite=False, preserveStats=True, detailedResults=False):
     # Always work with absolute paths
     src = os.path.abspath(src)
     dst = os.path.abspath(dst)
 
     # Attempt to copy everything
     results = copy(src, dst, includeFiles=includeFiles, includeDirs=includeDirs, excludeFiles=excludeFiles,
-                       excludeDirs=excludeDirs, level=level, followLinks=followLinks, forceOverwrite=forceOverwrite,
-                       preserveStats=preserveStats, detailedResults=True)
+                   excludeDirs=excludeDirs, level=level, followLinks=followLinks, forceOverwrite=forceOverwrite,
+                   preserveStats=preserveStats, detailedResults=True)
 
     # Add the additional stats not included by copy
     results['filesRemoved'] = 0
@@ -442,20 +450,28 @@ def mirror(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exc
                 if (not fileSkipped):
                     srcFilePath = os.path.join(src, relFilePath)
                     if (not os.path.exists(srcFilePath)):
-                        os.remove(filePath)
-                        results['filesRemoved'] += 1
-                        if (detailedResults):
-                            results['filesRemovedList'].append(relFilePath)
+                        try:
+                            os.remove(filePath)
+                            results['filesRemoved'] += 1
+                            if (detailedResults):
+                                results['filesRemovedList'].append(relFilePath)
+                        except (IOError, OSError):
+                            results['filesFailedList'].append(relFilePath)
 
             # Should the directory be deleted?
             srcRoot = os.path.join(src, relRoot)
             if (not os.path.exists(srcRoot)):
                 dirlist = os.listdir(root)
                 if (len(dirlist) == 0):
-                    os.rmdir(root)
-                    results['dirsRemoved'] += 1
-                    if (detailedResults):
-                        results['dirsRemovedList'].append(relRoot)
+                    try:
+                        os.rmdir(root)
+                        results['dirsRemoved'] += 1
+                        if (detailedResults):
+                            results['dirsRemovedList'].append(relRoot)
+                    except (IOError, OSError):
+                        results['dirsFailed'] += 1
+                        if (detailedResults):
+                            results['dirsFailedList'].append(relRoot)
                 else:
                     results['dirsFailed'] += 1
                     if (detailedResults):
@@ -471,6 +487,7 @@ def mirror(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exc
         results['dirsSkippedList'] = None
 
     return results
+
 
 '''
 Moves all files and folders from the given source directory to the destination.
@@ -525,6 +542,8 @@ Moves all files and folders from the given source directory to the destination.
          'filesMovedList':list, 'filesFailedList':list, 'filesSkippedList':list,
          'dirsMovedList':list, 'dirsFailedList':list, 'dirsSkippedList':list
 '''
+
+
 def move(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, excludeDirs=None, level=0,
          followLinks=False, forceOverwrite=False, preserveStats=True, detailedResults=False):
     # Always work with absolute paths
@@ -571,7 +590,10 @@ def move(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
                         break
 
                 if (deleteFile):
-                    os.remove(filePath)
+                    try:
+                        os.remove(filePath)
+                    except (IOError, OSError):
+                        copyResults['filesFailedList'].append(relFilePath)
 
             # If all files were deleted it is safe to delete the directory
             dirlist = os.listdir(root)
@@ -579,7 +601,10 @@ def move(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
                 if (os.path.islink(root)):
                     os.unlink(root)
                 else:
-                    os.rmdir(root)
+                    try:
+                        os.rmdir(root)
+                    except (IOError, OSError):
+                        copyResults['dirsFailed'].append(root)
 
     # Transpose results and return
     results = {}
@@ -596,8 +621,9 @@ def move(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
         results['dirsMovedList'] = copyResults['dirsCopiedList']
         results['dirsFailedList'] = copyResults['dirsFailedList']
         results['dirsSkippedList'] = copyResults['dirsSkippedList']
-    
+
     return results
+
 
 '''
 Synchronizes all files and folders between the two given paths.
@@ -655,6 +681,8 @@ copy(path2, path1)
          If detailedResults is set to True also includes the following:
          'filesFailedList':list, 'filesSkippedList':list, 'dirsFailedList':list, 'dirsSkippedList':list
 '''
+
+
 def sync(path1, path2, includeFiles=None, includeDirs=None, excludeFiles=None, excludeDirs=None, level=0,
          followLinks=False, forceOverwrite=False, preserveStats=True, detailedResults=False):
     # Always work with absolute paths
@@ -665,9 +693,9 @@ def sync(path1, path2, includeFiles=None, includeDirs=None, excludeFiles=None, e
                    level=level, followLinks=followLinks, forceOverwrite=forceOverwrite, preserveStats=preserveStats,
                    detailedResults=True)
     results2 = copy(path2, path1, includeFiles=includeFiles, includeDirs=includeDirs, excludeFiles=excludeDirs,
-                   level=level, followLinks=followLinks, forceOverwrite=forceOverwrite, preserveStats=preserveStats,
-                   detailedResults=True)
-    
+                    level=level, followLinks=followLinks, forceOverwrite=forceOverwrite, preserveStats=preserveStats,
+                    detailedResults=True)
+
     # Add new entries from results2 to the various lists of results
     for dpath in results2['filesCopiedList']:
         addPath = True
@@ -737,6 +765,7 @@ def sync(path1, path2, includeFiles=None, includeDirs=None, excludeFiles=None, e
 
     return results
 
+
 '''
 Checks if the two given paths point to the same place.
 
@@ -749,6 +778,8 @@ Checks if the two given paths point to the same place.
 :rtype:bool
 :return: Returns True if src and dst point to the same location, otherwise False.
 '''
+
+
 def _isSamePath(src, dst):
     # Mac/Unix
     if (hasattr(os.path, 'samefile')):
@@ -760,6 +791,7 @@ def _isSamePath(src, dst):
     # All other platforms
     return (os.path.normcase(os.path.abspath(src)) ==
             os.path.normcase(os.path.abspath(dst)))
+
 
 '''
 Normalizes the given pattern by adding wildcards when path has more levels.
@@ -780,6 +812,8 @@ Given a path 'Level1/Level2/Level3' and a pattern 'Level1' would return 'Level1/
 :rtype:string or regex
 :return: A string or regex object of the normalized pattern for the given path
 '''
+
+
 def _normalizeDirPattern(pattern, path):
     bIsRegex = False
     tmpPattern = pattern
@@ -792,7 +826,7 @@ def _normalizeDirPattern(pattern, path):
 
     numPathSep = path.count(os.path.sep)
     numPatternSep = tmpPattern.count(os.path.sep)
-    
+
     # When the path has more levels, fill in the pattern with wildcards
     if (numPathSep > numPatternSep):
         while (numPathSep > numPatternSep):
@@ -809,6 +843,7 @@ def _normalizeDirPattern(pattern, path):
         return re.compile(tmpPattern)
     else:
         return tmpPattern
+
 
 '''
 Normalizes the given pattern by adding wildcards when path has more levels.
@@ -834,6 +869,8 @@ Given a filepath 'Level1/Level2/MyFile.txt' and a pattern 'Level1/*.txt' will re
 :rtype:string or regex
 :return: A string or regex object of the normalized pattern for the given path
 '''
+
+
 def _normalizeFilePattern(pattern, filepath):
     bIsRegex = False
     tmpPattern = pattern
@@ -852,7 +889,7 @@ def _normalizeFilePattern(pattern, filepath):
     numPatternSep = tmpPattern.count(os.path.sep)
     if (tmpPattern != ''):
         numPatternSep = numPatternSep + 1
-    
+
     # When the path has more levels, fill in the pattern with wildcards
     if (numPathSep > numPatternSep):
         while (numPathSep > numPatternSep):
@@ -876,6 +913,7 @@ def _normalizeFilePattern(pattern, filepath):
     else:
         return tmpPattern
 
+
 '''
 Determines if the given path will be copied given the list of includes and excludes.
 When include patterns are provided the path must match at least one of the patterns
@@ -893,6 +931,8 @@ given and cannot be excluded
 :type excludes:array
 :param excludes: The list of compiled exclusive regex patterns to check the path against
 '''
+
+
 def _checkShouldCopy(path, bIsFile, includes, excludes):
     # The pattern will have '/' path separators (even on Windows). Make sure the path does too.
     rePath = path
@@ -908,7 +948,7 @@ def _checkShouldCopy(path, bIsFile, includes, excludes):
                 normPattern = _normalizeFilePattern(pattern, path)
             else:
                 normPattern = _normalizeDirPattern(pattern, path)
-            
+
             if (isinstance(normPattern, re._pattern_type)):
                 if (normPattern.match(rePath) != None):
                     isIncluded = True
@@ -927,7 +967,7 @@ def _checkShouldCopy(path, bIsFile, includes, excludes):
                 normPattern = _normalizeFilePattern(pattern, path)
             else:
                 normPattern = _normalizeDirPattern(pattern, path)
-            
+
             if (isinstance(normPattern, re._pattern_type)):
                 if (normPattern.match(rePath) != None):
                     return False
@@ -936,6 +976,7 @@ def _checkShouldCopy(path, bIsFile, includes, excludes):
                     return False
 
     return True
+
 
 '''
 Copies a file from the give source path to the destination.
@@ -965,6 +1006,8 @@ Copies a file from the give source path to the destination.
 :rtype:int
 :return: Returns a value 1 if the file was copied, value 0 if the file was skipped and -1 if an error occurred.
 '''
+
+
 def _copyFile(src, dst, includes=None, excludes=None, showProgress=True, forceOverwrite=False, preserveStats=True):
     # Only copy files
     if (not os.path.isfile(src)):
@@ -998,7 +1041,7 @@ def _copyFile(src, dst, includes=None, excludes=None, showProgress=True, forceOv
     else:
         # The number of bytes per read operation
         global BUFFERSIZE_KIB
-        maxReadLength = BUFFERSIZE_KIB*1024
+        maxReadLength = BUFFERSIZE_KIB * 1024
         try:
             with open(src, 'rb') as fsrc:
                 with open(dst, 'wb') as fdst:
@@ -1030,6 +1073,7 @@ def _copyFile(src, dst, includes=None, excludes=None, showProgress=True, forceOv
 
     return -1
 
+
 '''
 Copies the stat info (mode bits, atime, mtime, flags) from src to dst.
 
@@ -1039,6 +1083,8 @@ Copies the stat info (mode bits, atime, mtime, flags) from src to dst.
 :type dst:string
 :param dst: The destination path to copy stat info to.
 '''
+
+
 def _copyStats(src, dst):
     st = os.stat(src)
     mode = stat.S_IMODE(st.st_mode)
@@ -1056,6 +1102,7 @@ def _copyStats(src, dst):
             else:
                 raise
 
+
 '''
 Prints the current progress for the given file operation to any stdout or stderr handler attached to logger using the
 INFO level.
@@ -1066,6 +1113,8 @@ INFO level.
 :type totalValue:int
 :param totalValue: The maximum value of the progress to be achieved.
 '''
+
+
 def _displayProgress(currentValue, totalValue):
     # Displaying the progress bar should only be shown at the appropriate log level (INFO)
     if (logger.getEffectiveLevel() > logging.INFO):
@@ -1074,8 +1123,8 @@ def _displayProgress(currentValue, totalValue):
     # Attempt to grab all available stdout/stderr streams from the list of logger handlers
     streams = []
     for handler in logger.handlers:
-        if (isinstance(handler, logging.StreamHandler) and 
-            (handler.stream is sys.stderr or handler.stream is sys.stdout)):
+        if (isinstance(handler, logging.StreamHandler) and
+                (handler.stream is sys.stderr or handler.stream is sys.stdout)):
             streams.append(handler.stream)
 
     # If no output streams were found we can't display the progress bar
@@ -1104,16 +1153,19 @@ def _displayProgress(currentValue, totalValue):
         stream.write(strToDisplay)
         stream.flush()
 
+
 '''
 Prints a table showing the results of a copy operation to the INFO log.
 
 :type results:dict
 :param results: The dictionary containing the copy results to display.
 '''
+
+
 def _displayCopyResults(results):
     if (logger.getEffectiveLevel() > logging.ERROR):
         return
-    
+
     logger.info("--------------------")
     logger.info("Files:")
     if ('filesCopied' in results):
@@ -1132,6 +1184,7 @@ def _displayCopyResults(results):
     logger.info("\tFailed: %d", results['dirsFailed'])
     logger.info("--------------------")
 
+
 '''
 Determines the maximum depth of the tree for a given path.
 
@@ -1141,6 +1194,8 @@ Determines the maximum depth of the tree for a given path.
 :rtype:int
 :return: The maximum depth of path.
 '''
+
+
 def _getTreeDepth(path):
     maxDepth = 0
     for root, dirs, files in os.walk(path):
