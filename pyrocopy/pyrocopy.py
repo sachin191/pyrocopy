@@ -168,7 +168,7 @@ def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
                 dst = os.path.join(dst, os.path.basename(src))
 
             # Copy the file
-            result = _copyFile(src, dst, includeFilePatterns, excludeFilePatterns)
+            result = _copyFile(src, dst, includeFilePatterns, excludeFilePatterns, forceOverwrite=forceOverwrite)
             if (result == 1):
                 logger.info("Copied: %s => %s", src, dst)
                 results['filesCopied'] += 1
@@ -395,6 +395,9 @@ def mirror(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exc
     if (detailedResults):
         results['filesRemovedList'] = []
         results['dirsRemovedList'] = []
+    # Add the exclude fils
+    results['dirsSkippedList'] += excludeDirs
+    results['filesSkippedList'] += excludeFiles
 
     # Determine the max depth of src so that we don't go beyond that level in dst (if they're different)
     maxDepth = _getTreeDepth(src)
@@ -1037,7 +1040,6 @@ def _copyFile(src, dst, includes=None, excludes=None, showProgress=True, forceOv
             os.symlink(os.readlink(src), dst)
         except (IOError, OSError):
             return -1
-
     else:
         # The number of bytes per read operation
         global BUFFERSIZE_KIB
