@@ -453,20 +453,28 @@ def mirror(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exc
                 if (not fileSkipped):
                     srcFilePath = os.path.join(src, relFilePath)
                     if (not os.path.exists(srcFilePath)):
-                        os.remove(filePath)
-                        results['filesRemoved'] += 1
-                        if (detailedResults):
-                            results['filesRemovedList'].append(relFilePath)
+                        try:
+                            os.remove(filePath)
+                            results['filesRemoved'] += 1
+                            if (detailedResults):
+                                results['filesRemovedList'].append(relFilePath)
+                        except (IOError, OSError):
+                            results['filesFailedList'].append(relFilePath)
 
             # Should the directory be deleted?
             srcRoot = os.path.join(src, relRoot)
             if (not os.path.exists(srcRoot)):
                 dirlist = os.listdir(root)
                 if (len(dirlist) == 0):
-                    os.rmdir(root)
-                    results['dirsRemoved'] += 1
-                    if (detailedResults):
-                        results['dirsRemovedList'].append(relRoot)
+                    try:
+                        os.rmdir(root)
+                        results['dirsRemoved'] += 1
+                        if (detailedResults):
+                            results['dirsRemovedList'].append(relRoot)
+                    except (IOError, OSError):
+                        results['dirsFailed'] += 1
+                        if (detailedResults):
+                            results['dirsFailedList'].append(relRoot)
                 else:
                     results['dirsFailed'] += 1
                     if (detailedResults):
@@ -585,7 +593,10 @@ def move(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
                         break
 
                 if (deleteFile):
-                    os.remove(filePath)
+                    try:
+                        os.remove(filePath)
+                    except (IOError, OSError):
+                        copyResults['filesFailedList'].append(relFilePath)
 
             # If all files were deleted it is safe to delete the directory
             dirlist = os.listdir(root)
@@ -593,7 +604,10 @@ def move(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exclu
                 if (os.path.islink(root)):
                     os.unlink(root)
                 else:
-                    os.rmdir(root)
+                    try:
+                        os.rmdir(root)
+                    except (IOError, OSError):
+                        copyResults['dirsFailed'].append(root)
 
     # Transpose results and return
     results = {}
@@ -1022,25 +1036,29 @@ def _copyFile(src, dst, includes=None, excludes=None, showProgress=True, forceOv
     # Finally perform the copy
     logger.info("Copying: %s => %s", src, dst)
     if (os.path.islink(src)):
-        if not os.path.isfile(dst):
+        try:
             os.symlink(os.readlink(src), dst)
+        except (IOError, OSError):
+            return -1
     else:
-
         # The number of bytes per read operation
         global BUFFERSIZE_KIB
         maxReadLength = BUFFERSIZE_KIB * 1024
-        with open(src, 'rb') as fsrc:
-            with open(dst, 'wb') as fdst:
-                bytesTotal = os.path.getsize(src)
-                bytesWritten = 0
-                while 1:
-                    buf = fsrc.read(maxReadLength)
-                    if not buf:
-                        break
-                    fdst.write(buf)
+        try:
+            with open(src, 'rb') as fsrc:
+                with open(dst, 'wb') as fdst:
+                    bytesTotal = os.path.getsize(src)
+                    bytesWritten = 0
+                    while 1:
+                        buf = fsrc.read(maxReadLength)
+                        if not buf:
+                            break
+                        fdst.write(buf)
 
-                    bytesWritten += len(buf)
-                    _displayProgress(bytesWritten, bytesTotal)
+                        bytesWritten += len(buf)
+                        _displayProgress(bytesWritten, bytesTotal)
+        except (IOError, OSError):
+            return -1
 
         # Spit out an empty line so subsequent text starts on the next line
         logger.info("")
