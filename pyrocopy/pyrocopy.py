@@ -396,8 +396,13 @@ def mirror(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exc
         results['filesRemovedList'] = []
         results['dirsRemovedList'] = []
     # Add the exclude fils
-    results['dirsSkippedList'] += excludeDirs
-    results['filesSkippedList'] += excludeFiles
+    results['dirsSkippedList'] = []
+    if excludeDirs != None:
+        results['dirsSkippedList'] += excludeDirs
+
+    results['filesSkippedList'] = []
+    if excludeFiles != None:
+        results['filesSkippedList'] += excludeFiles
 
     # Determine the max depth of src so that we don't go beyond that level in dst (if they're different)
     maxDepth = _getTreeDepth(src)
