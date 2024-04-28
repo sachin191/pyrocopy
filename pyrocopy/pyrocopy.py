@@ -395,7 +395,8 @@ def mirror(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exc
     if (detailedResults):
         results['filesRemovedList'] = []
         results['dirsRemovedList'] = []
-    # Add the exclude fils
+
+    # Add the exclude files
     results['dirsSkippedList'] = []
     if excludeDirs != None:
         results['dirsSkippedList'] += excludeDirs
@@ -460,10 +461,12 @@ def mirror(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exc
                     if (not os.path.exists(srcFilePath)):
                         try:
                             os.remove(filePath)
+                            logger.info("Removed: %s", filePath)
                             results['filesRemoved'] += 1
                             if (detailedResults):
                                 results['filesRemovedList'].append(relFilePath)
                         except (IOError, OSError):
+                            logger.info("Remove failed: %s", relFilePath)
                             results['filesFailedList'].append(relFilePath)
 
             # Should the directory be deleted?
@@ -473,10 +476,12 @@ def mirror(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, exc
                 if (len(dirlist) == 0):
                     try:
                         os.rmdir(root)
+                        logger.info("Removed: %s", root)
                         results['dirsRemoved'] += 1
                         if (detailedResults):
                             results['dirsRemovedList'].append(relRoot)
                     except (IOError, OSError):
+                        logger.info("Remove failed: %s", relRoot)
                         results['dirsFailed'] += 1
                         if (detailedResults):
                             results['dirsFailedList'].append(relRoot)
@@ -1179,6 +1184,8 @@ def _displayCopyResults(results):
         logger.info("\tCopied: %d", results['filesCopied'])
     if ('filesMoved' in results):
         logger.info("\tMoved: %d", results['filesMoved'])
+    if ('filesRemoved' in results):
+        logger.info("\tRemoved: %d", results['filesRemoved'])
     logger.info("\tSkipped: %d", results['filesSkipped'])
     logger.info("\tFailed: %d", results['filesFailed'])
     logger.info("")
@@ -1187,6 +1194,8 @@ def _displayCopyResults(results):
         logger.info("\tCopied: %d", results['dirsCopied'])
     if ('dirsMoved' in results):
         logger.info("\tMoved: %d", results['dirsMoved'])
+    if ('dirsRemoved' in results):
+        logger.info("\tRemoved: %d", results['dirsRemoved'])
     logger.info("\tSkipped: %d", results['dirsSkipped'])
     logger.info("\tFailed: %d", results['dirsFailed'])
     logger.info("--------------------")
