@@ -1,6 +1,7 @@
 import argparse
 import logging
-from . import pyrocopy
+# from . import pyrocopy
+import pyrocopy
 
 def main():
     parser = argparse.ArgumentParser(description='A robust file copying utility.')
@@ -57,3 +58,6 @@ def main():
         results = pyrocopy.copy(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=args.excludedirs, level=args.level, followLinks=args.followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
 
     pyrocopy._displayCopyResults(results)
+
+# main program
+main()
