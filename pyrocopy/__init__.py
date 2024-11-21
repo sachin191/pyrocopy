@@ -1,3 +1,4 @@
+import sys
 import argparse
 import logging
 # from . import pyrocopy
@@ -46,18 +47,23 @@ def main():
     elif (args.verbose > 0):
         pyrocopy.logger.setLevel(logging.INFO - (args.verbose * 10))
 
+    show_detail_results = False
+    if ("-v" in sys.argv) or ("--verbose" in sys.argv):
+        # print("Verbose mode specified")
+        show_detail_results = True
+
     # Perform the desired operation
     results = None
     if (args.mirror):
-        results = pyrocopy.mirror(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=args.excludedirs, level=args.level, followLinks=args.followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
+        results = pyrocopy.mirror(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=args.excludedirs, level=args.level, followLinks=args.followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat), detailedResults=show_detail_results)
     elif (args.move):
-        results = pyrocopy.move(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=args.excludedirs, level=args.level, followLinks=args.followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
+        results = pyrocopy.move(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=args.excludedirs, level=args.level, followLinks=args.followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat), detailedResults=show_detail_results)
     elif (args.sync):
-        results = pyrocopy.sync(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=args.excludedirs, level=args.level, followLinks=args.followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
+        results = pyrocopy.sync(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=args.excludedirs, level=args.level, followLinks=args.followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat), detailedResults=show_detail_results)
     else:
-        results = pyrocopy.copy(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=args.excludedirs, level=args.level, followLinks=args.followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat))
+        results = pyrocopy.copy(args.source, args.destination, includeFiles=args.includefiles, includeDirs=args.includedirs, excludeFiles=args.excludefiles, excludeDirs=args.excludedirs, level=args.level, followLinks=args.followlinks, forceOverwrite=args.force, preserveStats=(not args.nostat), detailedResults=show_detail_results)
 
-    pyrocopy._displayCopyResults(results)
+    pyrocopy._displayCopyResults(results, show_detail_results)
 
 # main program
 main()

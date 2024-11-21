@@ -110,6 +110,7 @@ Copies all files and folders from the given source directory to the destination.
 
 def copy(src, dst, includeFiles=None, includeDirs=None, excludeFiles=None, excludeDirs=None, level=0,
          followLinks=False, forceOverwrite=False, preserveStats=True, detailedResults=False):
+
     # Always work with absolute paths
     src = os.path.abspath(src)
     dst = os.path.abspath(dst)
@@ -1173,10 +1174,32 @@ Prints a table showing the results of a copy operation to the INFO log.
 :param results: The dictionary containing the copy results to display.
 '''
 
+def _displayCopyFileNames(results, descrption, field_count, field_filelist):
+    if (field_filelist in results):
+        if (results[field_count] != 0):
+            logger.info("--------------------")
+            logger.info("%s Count: %d", descrption, results[field_count])
+            if results[field_filelist] == None:
+                logger.info("Error! %s is Null", field_filelist)
+            else:
+                for fname in results[field_filelist]:
+                    logger.info(fname)
+    return
 
-def _displayCopyResults(results):
+def _displayCopyResults(results, display_filenames=False, display_dirs=False, display_skipped=False):
     if (logger.getEffectiveLevel() > logging.ERROR):
         return
+
+    if display_filenames:
+        _displayCopyFileNames(results, "Files Copied", 'filesCopied', 'filesCopiedList')
+        _displayCopyFileNames(results, "Files Failed", 'filesFailed', 'filesFailedList')
+        if display_skipped:
+            _displayCopyFileNames(results, "Files Skipped", 'filesSkipped', 'filesSkippedList')
+        if display_dirs:
+            _displayCopyFileNames(results, "Dirs Copied", 'dirsCopied', 'dirsCopiedList')
+            _displayCopyFileNames(results, "Dirs Failed", 'dirsFailed', 'dirsFailedList')
+            if display_skipped:
+                _displayCopyFileNames(results, "Dirs Skipped", 'dirsSkipped', 'dirsSkippedList')
 
     logger.info("--------------------")
     logger.info("Files:")
