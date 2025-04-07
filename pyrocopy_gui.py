@@ -1,13 +1,13 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
-from tks import Tks
+from Tks import tks
 import subprocess
 
 # ToDo
 # 1. Do thorough testing - check functionality
 # 2. Separate Tks as a package in differnt git repo and use it as module
 # 3. self.widgets as a directory
-# 4. same variable for copy options
+# 4. same variable for copy options:
 
 class PyrocopyApp:
     def __init__(self, tks, root):
@@ -142,7 +142,7 @@ class PyrocopyApp:
             messagebox.showerror("Error", f"Error executing Pyrocopy:\n{e.stderr.decode()}")
 
 if __name__ == "__main__":
-    tks = Tks(title = "Pyrocopy App", width=360, height=300)
+    tks = tks.Tks(title = "Pyrocopy App", width=360, height=300)
     root = tks.GetFrameRoot()
     app = PyrocopyApp(tks, root)
     app.CreateAppGUI()
