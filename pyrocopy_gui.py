@@ -142,7 +142,7 @@ class PyrocopyApp:
             messagebox.showerror("Error", f"Error executing Pyrocopy:\n{e.stderr.decode()}")
 
 if __name__ == "__main__":
-    tks = tks.Tks(title = "Pyrocopy App", width=360, height=300)
+    tks = tks.Tks(title = "Pyrocopy App", width=380, height=400)
     root = tks.GetFrameRoot()
     app = PyrocopyApp(tks, root)
     app.CreateAppGUI()
